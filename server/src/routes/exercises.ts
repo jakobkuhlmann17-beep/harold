@@ -4,6 +4,30 @@ import { prisma } from '../index';
 
 const router = Router();
 
+// GET /api/exercises/history — unique exercise names with usage count
+router.get('/history', async (req: AuthRequest, res: Response) => {
+  try {
+    const exercises = await prisma.exercise.findMany({
+      where: { day: { week: { userId: req.userId } } },
+      select: { name: true },
+    });
+
+    const counts: Record<string, number> = {};
+    for (const ex of exercises) {
+      counts[ex.name] = (counts[ex.name] || 0) + 1;
+    }
+
+    const result = Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    res.json(result);
+  } catch (err: any) {
+    console.error('Exercise history error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/', async (req: AuthRequest, res: Response) => {
   const { dayId, name, order } = req.body;
   // Verify ownership

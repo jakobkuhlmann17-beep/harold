@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
+import ExerciseAutocomplete from '../components/ExerciseAutocomplete';
 
 interface SetData { id: number; reps: number | null; weightKg: number | null; notes: string | null; feedback: string | null; completed: boolean; }
 interface ExerciseData { id: number; name: string; order: number; sets: SetData[]; }
@@ -24,9 +25,13 @@ export default function Workout() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [newExName, setNewExName] = useState('');
+  const [exerciseHistory, setExerciseHistory] = useState<{ name: string; count: number }[]>([]);
 
   const fetchWeeks = async () => { const { data } = await api.get('/weeks'); setWeeks(data); if (data.length > 0) setWeekIdx(data.length - 1); setLoading(false); };
-  useEffect(() => { fetchWeeks(); }, []);
+  useEffect(() => {
+    fetchWeeks();
+    api.get('/exercises/history').then(({ data }) => setExerciseHistory(data)).catch(() => {});
+  }, []);
 
   const currentWeek = weeks[weekIdx];
   const sortedDays = currentWeek?.days?.slice().sort((a, b) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek)) || [];
@@ -34,7 +39,7 @@ export default function Workout() {
 
   const createEmptyWeek = async () => { await api.post('/weeks'); await fetchWeeks(); };
   const generateNext = async () => { if (!currentWeek) return; setGenerating(true); try { await api.post(`/weeks/${currentWeek.id}/generate-next`); await fetchWeeks(); } catch (err: any) { alert(err.response?.data?.error || 'Generation failed'); } setGenerating(false); };
-  const addExercise = async () => { if (!currentDay || !newExName.trim()) return; await api.post('/exercises', { dayId: currentDay.id, name: newExName.trim(), order: currentDay.exercises.length }); setNewExName(''); await fetchWeeks(); };
+  const addExercise = async (nameOverride?: string) => { const name = (nameOverride || newExName).trim(); if (!currentDay || !name) return; await api.post('/exercises', { dayId: currentDay.id, name, order: currentDay.exercises.length }); setNewExName(''); await fetchWeeks(); api.get('/exercises/history').then(({ data }) => setExerciseHistory(data)).catch(() => {}); };
   const deleteExercise = async (exId: number) => { await api.delete(`/exercises/${exId}`); await fetchWeeks(); };
   const addSet = async (exercise: ExerciseData) => { const last = exercise.sets[exercise.sets.length - 1]; await api.post('/sets', { exerciseId: exercise.id, reps: last?.reps ?? null, weightKg: last?.weightKg ?? null }); await fetchWeeks(); };
   const updateSet = async (setId: number, field: string, value: any) => { await api.put(`/sets/${setId}`, { [field]: value }); await fetchWeeks(); };
@@ -139,6 +144,7 @@ export default function Workout() {
                 currentDay={currentDay} newExName={newExName} setNewExName={setNewExName}
                 addExercise={addExercise} deleteExercise={deleteExercise} addSet={addSet}
                 updateSet={updateSet} deleteSet={deleteSet} updateExerciseName={updateExerciseName}
+                exerciseHistory={exerciseHistory}
               />}
               {activityType === 'RUN' && currentDay && <CardioContent dayId={currentDay.id} type="RUN" onSaved={fetchWeeks} existing={currentDay.cardioSession} />}
               {activityType === 'CYCLING' && currentDay && <CardioContent dayId={currentDay.id} type="CYCLING" onSaved={fetchWeeks} existing={currentDay.cardioSession} />}
@@ -187,10 +193,11 @@ export default function Workout() {
 }
 
 // --- Workout exercises content ---
-function WorkoutContent({ currentDay, newExName, setNewExName, addExercise, deleteExercise, addSet, updateSet, deleteSet, updateExerciseName }: {
+function WorkoutContent({ currentDay, newExName, setNewExName, addExercise, deleteExercise, addSet, updateSet, deleteSet, updateExerciseName, exerciseHistory }: {
   currentDay: any; newExName: string; setNewExName: (v: string) => void;
-  addExercise: () => void; deleteExercise: (id: number) => void; addSet: (ex: any) => void;
+  addExercise: (nameOverride?: string) => void; deleteExercise: (id: number) => void; addSet: (ex: any) => void;
   updateSet: (id: number, f: string, v: any) => void; deleteSet: (id: number) => void; updateExerciseName: (id: number, n: string) => void;
+  exerciseHistory: { name: string; count: number }[];
 }) {
   return (
     <>
@@ -230,9 +237,14 @@ function WorkoutContent({ currentDay, newExName, setNewExName, addExercise, dele
         </div>
       ))}
       <div className="flex gap-2">
-        <input value={newExName} onChange={(e) => setNewExName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addExercise()}
-          placeholder="Add new exercise..." className="border border-outline-variant rounded-xl px-4 py-3 text-sm flex-1 font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline text-on-surface" />
-        <button onClick={addExercise} className="hearth-glow text-on-primary rounded-xl px-5 py-3 text-sm font-headline font-bold hover:opacity-90 transition-opacity flex items-center gap-1">
+        <ExerciseAutocomplete
+          value={newExName}
+          onChange={setNewExName}
+          onSubmit={(name) => { addExercise(name); }}
+          placeholder="Add exercise..."
+          suggestions={exerciseHistory}
+        />
+        <button onClick={() => addExercise()} className="hearth-glow text-on-primary rounded-xl px-5 py-3 text-sm font-headline font-bold hover:opacity-90 transition-opacity flex items-center gap-1">
           <span className="material-symbols-outlined text-[18px]">add</span> Add
         </button>
       </div>
