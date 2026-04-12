@@ -103,8 +103,13 @@ export default function Nutrition() {
 
   // Smart target calculations
   const macroCalories = (proTarget * 4) + (carbTarget * 4) + (fatTarget * 9);
-  const diff = macroCalories - calTarget;
-  const absDiff = Math.abs(diff);
+
+  // Current percentage split (derived from macros)
+  const getCurrentSplit = () => {
+    const total = (proTarget * 4) + (carbTarget * 4) + (fatTarget * 9);
+    if (total === 0) return { p: 0.30, c: 0.40, f: 0.30 };
+    return { p: (proTarget * 4) / total, c: (carbTarget * 4) / total, f: (fatTarget * 9) / total };
+  };
 
   const applyPreset = (preset: typeof PRESETS[0]) => {
     setActivePreset(preset.label);
@@ -113,23 +118,21 @@ export default function Nutrition() {
     setFatTarget(Math.round((calTarget * preset.f) / 9));
   };
 
-  const recalcMacrosFromCal = () => {
-    const totalMacroCal = (proTarget * 4) + (carbTarget * 4) + (fatTarget * 9);
-    if (totalMacroCal === 0) return;
-    const pPct = (proTarget * 4) / totalMacroCal;
-    const cPct = (carbTarget * 4) / totalMacroCal;
-    const fPct = (fatTarget * 9) / totalMacroCal;
-    setProTarget(Math.round((calTarget * pPct) / 4));
-    setCarbTarget(Math.round((calTarget * cPct) / 4));
-    setFatTarget(Math.round((calTarget * fPct) / 9));
+  // When calories change, auto-recalculate macros keeping current split
+  const setCalTargetAndSync = (newCal: number) => {
+    const split = getCurrentSplit();
+    setCalTarget(newCal);
+    setProTarget(Math.round((newCal * split.p) / 4));
+    setCarbTarget(Math.round((newCal * split.c) / 4));
+    setFatTarget(Math.round((newCal * split.f) / 9));
+    setActivePreset(null);
   };
 
-  const recalcCalFromMacros = () => {
-    setCalTarget((proTarget * 4) + (carbTarget * 4) + (fatTarget * 9));
+  // When a macro changes, auto-update calorie target to match
+  const syncCalFromMacros = (p: number, c: number, f: number) => {
+    setCalTarget((p * 4) + (c * 4) + (f * 9));
+    setActivePreset(null);
   };
-
-  const inc = (val: number, set: (v: number) => void, step: number) => { set(val + step); setActivePreset(null); };
-  const dec = (val: number, set: (v: number) => void, step: number) => { set(Math.max(0, val - step)); setActivePreset(null); };
 
   return (
     <div className="space-y-6">
@@ -292,42 +295,39 @@ export default function Nutrition() {
               ))}
             </div>
 
-            {/* Increment controls */}
+            {/* Increment controls — calories auto-sync macros, macros auto-sync calories */}
             <div className="space-y-3">
-              <IncrementRow label="Daily Calories" value={calTarget} onChange={(v) => { setCalTarget(v); setActivePreset(null); }} step={50} onInc={() => inc(calTarget, setCalTarget, 50)} onDec={() => dec(calTarget, setCalTarget, 50)} />
-              <IncrementRow label="Protein (g)" value={proTarget} onChange={(v) => { setProTarget(v); setActivePreset(null); }} step={5} onInc={() => inc(proTarget, setProTarget, 5)} onDec={() => dec(proTarget, setProTarget, 5)} />
-              <IncrementRow label="Carbs (g)" value={carbTarget} onChange={(v) => { setCarbTarget(v); setActivePreset(null); }} step={5} onInc={() => inc(carbTarget, setCarbTarget, 5)} onDec={() => dec(carbTarget, setCarbTarget, 5)} />
-              <IncrementRow label="Fat (g)" value={fatTarget} onChange={(v) => { setFatTarget(v); setActivePreset(null); }} step={5} onInc={() => inc(fatTarget, setFatTarget, 5)} onDec={() => dec(fatTarget, setFatTarget, 5)} />
+              <IncrementRow label="Daily Calories" value={calTarget}
+                onChange={(v) => setCalTargetAndSync(v)} step={50}
+                onInc={() => setCalTargetAndSync(calTarget + 50)}
+                onDec={() => setCalTargetAndSync(Math.max(0, calTarget - 50))} />
+              <IncrementRow label="Protein (g)" value={proTarget}
+                onChange={(v) => { setProTarget(v); syncCalFromMacros(v, carbTarget, fatTarget); }} step={5}
+                onInc={() => { const v = proTarget + 5; setProTarget(v); syncCalFromMacros(v, carbTarget, fatTarget); }}
+                onDec={() => { const v = Math.max(0, proTarget - 5); setProTarget(v); syncCalFromMacros(v, carbTarget, fatTarget); }} />
+              <IncrementRow label="Carbs (g)" value={carbTarget}
+                onChange={(v) => { setCarbTarget(v); syncCalFromMacros(proTarget, v, fatTarget); }} step={5}
+                onInc={() => { const v = carbTarget + 5; setCarbTarget(v); syncCalFromMacros(proTarget, v, fatTarget); }}
+                onDec={() => { const v = Math.max(0, carbTarget - 5); setCarbTarget(v); syncCalFromMacros(proTarget, v, fatTarget); }} />
+              <IncrementRow label="Fat (g)" value={fatTarget}
+                onChange={(v) => { setFatTarget(v); syncCalFromMacros(proTarget, carbTarget, v); }} step={5}
+                onInc={() => { const v = fatTarget + 5; setFatTarget(v); syncCalFromMacros(proTarget, carbTarget, v); }}
+                onDec={() => { const v = Math.max(0, fatTarget - 5); setFatTarget(v); syncCalFromMacros(proTarget, carbTarget, v); }} />
             </div>
 
-            {/* Live breakdown */}
+            {/* Live breakdown — always in sync now */}
             <div className="bg-surface-container-lowest rounded-xl p-4 text-sm font-body space-y-1">
               <p className="font-headline font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-2">Macro Breakdown</p>
               <div className="flex justify-between"><span className="text-on-surface-variant">Protein {proTarget}g &times; 4</span><span className="font-headline font-bold text-on-surface">{proTarget * 4} kcal <span className="text-on-surface-variant font-normal">({macroCalories > 0 ? Math.round((proTarget * 4) / macroCalories * 100) : 0}%)</span></span></div>
               <div className="flex justify-between"><span className="text-on-surface-variant">Carbs {carbTarget}g &times; 4</span><span className="font-headline font-bold text-on-surface">{carbTarget * 4} kcal <span className="text-on-surface-variant font-normal">({macroCalories > 0 ? Math.round((carbTarget * 4) / macroCalories * 100) : 0}%)</span></span></div>
               <div className="flex justify-between"><span className="text-on-surface-variant">Fat {fatTarget}g &times; 9</span><span className="font-headline font-bold text-on-surface">{fatTarget * 9} kcal <span className="text-on-surface-variant font-normal">({macroCalories > 0 ? Math.round((fatTarget * 9) / macroCalories * 100) : 0}%)</span></span></div>
               <div className="border-t border-outline-variant/20 mt-2 pt-2 flex justify-between">
-                <span className="text-on-surface-variant">Total from macros</span>
-                <span className="font-headline font-bold text-on-surface">{macroCalories.toLocaleString()} kcal</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Calorie target</span>
-                <span className="font-headline font-bold text-on-surface">{calTarget.toLocaleString()} kcal</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-on-surface-variant">Difference</span>
-                <span className={`font-headline font-bold flex items-center gap-1 ${absDiff <= 50 ? 'text-[#2e7d32]' : absDiff <= 150 ? 'text-secondary' : 'text-error'}`}>
-                  {diff >= 0 ? '+' : ''}{diff} kcal
-                  {absDiff <= 50 && <span className="material-symbols-outlined text-[14px]">check</span>}
-                  {absDiff > 50 && <span className="material-symbols-outlined text-[14px]">warning</span>}
+                <span className="text-on-surface-variant">Total</span>
+                <span className="font-headline font-bold text-on-surface flex items-center gap-1">
+                  {calTarget.toLocaleString()} kcal
+                  <span className="text-[#2e7d32]"><span className="material-symbols-outlined text-[14px]">check</span></span>
                 </span>
               </div>
-              {absDiff > 50 && (
-                <div className="flex gap-3 mt-2">
-                  <button type="button" onClick={recalcMacrosFromCal} className="text-primary text-xs font-bold underline underline-offset-2 cursor-pointer">Recalculate macros to match</button>
-                  <button type="button" onClick={recalcCalFromMacros} className="text-primary text-xs font-bold underline underline-offset-2 cursor-pointer">Update calorie target to match</button>
-                </div>
-              )}
             </div>
 
             <button onClick={saveTargets} className="hearth-glow text-white rounded-full px-8 py-3 font-headline font-bold w-full hover:opacity-90 transition-opacity">Save Targets</button>
