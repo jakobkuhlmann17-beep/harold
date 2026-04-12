@@ -266,16 +266,16 @@ function PostCard({ post, currentUserId, onLike, onDelete, onViewWorkout }: {
 
       {/* Workout preview card */}
       {post.hasWorkout && onViewWorkout && (
-        <div className="bg-primary-fixed/30 rounded-xl p-4 border border-primary-fixed mb-3 flex items-center justify-between">
-          <div>
-            <p className="font-headline font-bold text-sm text-on-surface flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px]">fitness_center</span> Shared Workout
+        <div className="bg-primary-fixed/30 rounded-xl p-4 border border-primary-fixed mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-headline font-bold text-sm text-on-surface flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px]">fitness_center</span> Shared Workout
             </p>
-            <p className="text-xs text-on-surface-variant font-body mt-0.5">Tap to view the full workout plan</p>
+            <button onClick={onViewWorkout} className="text-primary font-bold text-xs font-headline flex items-center gap-1 hover:gap-2 transition-all">
+              View Full <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </button>
           </div>
-          <button onClick={onViewWorkout} className="text-primary font-bold text-xs font-headline flex items-center gap-1 hover:gap-2 transition-all">
-            View <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-          </button>
+          <p className="text-xs text-on-surface-variant font-body">Tap to view the full workout plan with all exercises, sets and weights.</p>
         </div>
       )}
 
@@ -319,49 +319,56 @@ function WorkoutModal({ data, onClose }: { data: any; onClose: () => void }) {
   if (!data) return null;
   const DAY_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
   const days = (data.days || []).slice().sort((a: any, b: any) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek));
+  const daysWithContent = days.filter((d: any) => (d.exercises?.length > 0) || (d.activityType !== 'WORKOUT' && d.cardioSession));
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-surface-container-lowest rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-surface-container-lowest p-6 pb-3 border-b border-outline-variant/20 flex items-center justify-between z-10">
+      <div className="bg-surface-container-lowest rounded-3xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-surface-container-lowest rounded-t-3xl p-6 pb-3 border-b border-outline-variant/20 flex items-center justify-between z-10">
           <div>
-            <p className="font-headline font-bold text-lg text-on-surface">{data.user?.username}'s Week {data.weekNumber}</p>
+            <p className="font-headline font-bold text-lg text-on-surface">{data.user?.username}&apos;s Week {data.weekNumber}</p>
             <p className="text-xs text-on-surface-variant font-label">{data.createdAt?.split('T')[0]}</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center hover:bg-surface-container-highest transition-colors">
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
-        <div className="p-6 space-y-5">
-          {days.map((d: any) => (
+        <div className="p-6 space-y-6">
+          {daysWithContent.map((d: any) => (
             <div key={d.id}>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 pb-2 mb-3 border-b border-outline-variant/20">
                 <span className="font-headline font-bold text-sm text-on-surface">{d.dayOfWeek.charAt(0) + d.dayOfWeek.slice(1).toLowerCase()}</span>
                 {d.focus && <span className="bg-primary-fixed text-primary text-[10px] rounded-full px-2 py-0.5 font-bold">{d.focus}</span>}
               </div>
               {d.activityType !== 'WORKOUT' && d.cardioSession && (
-                <p className="text-sm text-on-surface-variant font-body ml-2">
-                  {d.activityType === 'RUN' ? '\ud83c\udfc3' : '\ud83d\udeb4'} {d.cardioSession.distanceKm || '?'}km in {d.cardioSession.durationMinutes || '?'} min
-                </p>
+                <div className="bg-surface-container-low rounded-xl p-3 mb-2 flex items-center gap-2">
+                  <span className="text-lg">{d.activityType === 'RUN' ? '\ud83c\udfc3' : '\ud83d\udeb4'}</span>
+                  <span className="font-body text-sm text-on-surface">{d.cardioSession.distanceKm || '?'}km in {d.cardioSession.durationMinutes || '?'} min</span>
+                </div>
               )}
               {d.exercises?.map((ex: any) => (
-                <div key={ex.id} className="ml-2 mb-1">
-                  <span className="font-body text-sm text-on-surface font-medium">{ex.name}</span>
-                  <span className="text-xs text-on-surface-variant font-body ml-2">
-                    {ex.sets.map((s: any) => {
+                <div key={ex.id} className="mb-2">
+                  <p className="font-headline font-bold text-sm text-on-surface mb-1">{ex.name}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {ex.sets.map((s: any, si: number) => {
                       const parts = [];
                       if (s.reps) parts.push(s.reps);
-                      if (s.weightKg) parts.push(`x${s.weightKg}kg`);
-                      return parts.join('') || '\u2014';
-                    }).join(', ')}
-                  </span>
+                      if (s.weightKg) parts.push(`\u00d7${s.weightKg}kg`);
+                      const label = parts.join(' ') || '\u2014';
+                      return (
+                        <span key={si} className={`rounded-full px-2 py-1 text-xs font-bold ${s.completed ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface-variant'}`}>
+                          {label}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
-              {d.exercises?.length === 0 && d.activityType === 'WORKOUT' && (
-                <p className="text-xs text-outline font-body ml-2 italic">Rest day</p>
-              )}
             </div>
           ))}
+          {daysWithContent.length === 0 && (
+            <p className="text-center text-on-surface-variant font-body py-4">No workout data to show</p>
+          )}
         </div>
       </div>
     </div>
