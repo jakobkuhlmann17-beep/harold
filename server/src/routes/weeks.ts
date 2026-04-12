@@ -56,18 +56,123 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   res.json(week);
 });
 
+// GET /api/weeks/compilation — summary stats per week
+router.get('/compilation', async (req: AuthRequest, res: Response) => {
+  try {
+    const weeks = await prisma.week.findMany({
+      where: { userId: req.userId },
+      orderBy: { weekNumber: 'asc' },
+      include: {
+        days: {
+          include: {
+            exercises: { include: { sets: true } },
+            cardioSession: true,
+          },
+        },
+      },
+    });
+
+    const result = weeks.map((w) => {
+      let totalSets = 0;
+      let completedSets = 0;
+      let totalVolume = 0;
+      let activeDays = 0;
+      let cardioSessions = 0;
+      let totalDistanceKm = 0;
+      const exerciseCounts: Record<string, number> = {};
+      const focusSet = new Set<string>();
+
+      for (const d of w.days) {
+        if (d.focus) focusSet.add(d.focus);
+        let dayActive = false;
+
+        for (const ex of d.exercises) {
+          for (const s of ex.sets) {
+            totalSets++;
+            if (s.completed) {
+              completedSets++;
+              dayActive = true;
+              if (s.reps && s.weightKg) totalVolume += s.reps * s.weightKg;
+              exerciseCounts[ex.name] = (exerciseCounts[ex.name] || 0) + 1;
+            }
+          }
+        }
+
+        if (d.activityType === 'RUN' || d.activityType === 'CYCLING') {
+          cardioSessions++;
+          if (d.cardioSession) {
+            dayActive = true;
+            if (d.cardioSession.distanceKm) totalDistanceKm += d.cardioSession.distanceKm;
+          }
+        }
+
+        if (dayActive) activeDays++;
+      }
+
+      const topExercise = Object.entries(exerciseCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+      const completionRate = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+
+      return {
+        id: w.id,
+        weekNumber: w.weekNumber,
+        totalSets,
+        completedSets,
+        completionRate,
+        totalVolume: Math.round(totalVolume),
+        activeDays,
+        cardioSessions,
+        totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
+        topExercise,
+        focus: Array.from(focusSet),
+        createdAt: w.createdAt.toISOString().split('T')[0],
+      };
+    });
+
+    res.json(result);
+  } catch (err: any) {
+    console.error('Compilation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/weeks/all — delete ALL weeks for user
+router.delete('/all', async (req: AuthRequest, res: Response) => {
+  try {
+    const weeks = await prisma.week.findMany({ where: { userId: req.userId } });
+    const weekIds = weeks.map((w) => w.id);
+    if (weekIds.length === 0) return res.json({ deleted: true });
+
+    const days = await prisma.day.findMany({ where: { weekId: { in: weekIds } } });
+    const dayIds = days.map((d) => d.id);
+    const exercises = await prisma.exercise.findMany({ where: { dayId: { in: dayIds } } });
+    const exerciseIds = exercises.map((e) => e.id);
+
+    await prisma.set.deleteMany({ where: { exerciseId: { in: exerciseIds } } });
+    await prisma.exercise.deleteMany({ where: { dayId: { in: dayIds } } });
+    await prisma.cardioSession.deleteMany({ where: { dayId: { in: dayIds } } });
+    await prisma.day.deleteMany({ where: { weekId: { in: weekIds } } });
+    await prisma.week.deleteMany({ where: { id: { in: weekIds } } });
+
+    res.json({ deleted: true });
+  } catch (err: any) {
+    console.error('Delete all weeks error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/load-template', async (req: AuthRequest, res: Response) => {
   try {
-    // Check user doesn't already have workout data
-    const existing = await prisma.week.findFirst({ where: { userId: req.userId } });
-    if (existing) {
-      return res.status(400).json({ error: 'You already have workout data' });
-    }
+    // Dynamic week number
+    const lastWeek = await prisma.week.findFirst({
+      where: { userId: req.userId },
+      orderBy: { weekNumber: 'desc' },
+    });
+    const weekNumber = lastWeek ? lastWeek.weekNumber + 1 : 1;
 
     const week = await prisma.week.create({
       data: {
         userId: req.userId!,
-        weekNumber: 3,
+        weekNumber,
       },
     });
 
@@ -289,6 +394,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 
   await prisma.set.deleteMany({ where: { exerciseId: { in: exerciseIds } } });
   await prisma.exercise.deleteMany({ where: { dayId: { in: dayIds } } });
+  await prisma.cardioSession.deleteMany({ where: { dayId: { in: dayIds } } });
   await prisma.day.deleteMany({ where: { weekId: week.id } });
   await prisma.week.delete({ where: { id: week.id } });
 
