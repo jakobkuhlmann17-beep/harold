@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import Layout from './components/Layout';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Welcome from './pages/Welcome';
@@ -21,11 +22,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={token ? <Navigate to="/" /> : <Login />} />
-      <Route path="/register" element={token ? <Navigate to="/" /> : <Register />} />
+      <Route path="/" element={token ? <Navigate to="/dashboard" /> : <Landing />} />
+      <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
+      <Route path="/register" element={token ? <Navigate to="/dashboard" /> : <Register />} />
       <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
       <Route
-        path="/"
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <Layout />
@@ -33,6 +35,14 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+      </Route>
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="workout" element={<Workout />} />
         <Route path="trends" element={<Trends />} />
         <Route path="nutrition" element={<Nutrition />} />

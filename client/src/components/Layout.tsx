@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: 'dashboard', end: true },
+  { to: '/dashboard', label: 'Dashboard', icon: 'dashboard', end: true },
   { to: '/workout', label: 'Workout', icon: 'fitness_center' },
   { to: '/trends', label: 'Trends', icon: 'insights' },
   { to: '/nutrition', label: 'Nutrition', icon: 'restaurant' },
@@ -10,7 +10,7 @@ const NAV_ITEMS = [
 ];
 
 const PAGE_TITLES: Record<string, string> = {
-  '/': 'Daily Pulse',
+  '/dashboard': 'Daily Pulse',
   '/workout': 'Workout Log',
   '/trends': 'Trends',
   '/nutrition': 'Nutrition',

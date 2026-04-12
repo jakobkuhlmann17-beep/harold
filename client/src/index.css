@@ -92,6 +92,10 @@ body {
   -webkit-backdrop-filter: blur(20px);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
