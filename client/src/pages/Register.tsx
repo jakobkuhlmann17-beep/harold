@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 
 export default function Register() {
   const { register } = useAuth();
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,6 +15,7 @@ export default function Register() {
     setError('');
     try {
       await register(username, email, password);
+      navigate('/welcome');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed');
     }

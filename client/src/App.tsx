@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './lib/auth';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Welcome from './pages/Welcome';
 import Dashboard from './pages/Dashboard';
 import Workout from './pages/Workout';
 import Nutrition from './pages/Nutrition';
@@ -20,6 +21,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={token ? <Navigate to="/" /> : <Login />} />
       <Route path="/register" element={token ? <Navigate to="/" /> : <Register />} />
+      <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
       <Route
         path="/"
         element={

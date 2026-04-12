@@ -54,6 +54,202 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   res.json(week);
 });
 
+router.post('/load-template', async (req: AuthRequest, res: Response) => {
+  try {
+    // Check user doesn't already have workout data
+    const existing = await prisma.week.findFirst({ where: { userId: req.userId } });
+    if (existing) {
+      return res.status(400).json({ error: 'You already have workout data' });
+    }
+
+    const week = await prisma.week.create({
+      data: {
+        userId: req.userId!,
+        weekNumber: 3,
+      },
+    });
+
+    const templateDays = [
+      {
+        dayOfWeek: 'MONDAY',
+        focus: 'chest',
+        exercises: [
+          { name: 'Barbells', order: 0, sets: [
+            { reps: 8, weightKg: 28 }, { reps: 7, weightKg: 28 }, { reps: 6, weightKg: 28 }, { reps: 5, weightKg: 28 },
+          ]},
+          { name: 'Cable chest', order: 1, sets: [
+            { reps: 10, weightKg: 18.5 }, { reps: 10, weightKg: 18.5 }, { reps: 7, weightKg: 18.5 },
+          ]},
+          { name: 'Over the neck', order: 2, sets: [
+            { reps: 8, weightKg: 34 }, { reps: 6, weightKg: 34, notes: 'to failure' },
+          ]},
+          { name: 'Dips', order: 3, sets: [
+            { reps: 18 }, { reps: 16 }, { reps: 13 },
+          ]},
+        ],
+      },
+      {
+        dayOfWeek: 'TUESDAY',
+        focus: 'arms/abs',
+        exercises: [
+          { name: 'Bicep curls', order: 0, sets: [
+            { reps: 9, weightKg: 16 }, { reps: 7, weightKg: 16 }, { reps: 6, weightKg: 16 },
+          ]},
+          { name: 'Standing curls', order: 1, sets: [
+            { reps: 15, weightKg: 13 }, { reps: 15, weightKg: 13 }, { reps: 15, weightKg: 11 },
+          ]},
+          { name: 'Skull crushers', order: 2, sets: [
+            { reps: 15, weightKg: 13 }, { reps: 15, weightKg: 13 }, { reps: 15, weightKg: 13 },
+          ]},
+          { name: 'Rows', order: 3, sets: [
+            { reps: 12, weightKg: 26 }, { reps: 12, weightKg: 26 }, { reps: 8, weightKg: 28 },
+          ]},
+          { name: 'Crunches', order: 4, sets: [
+            { reps: 15 }, { reps: 15 }, { reps: 15 },
+          ]},
+        ],
+      },
+      {
+        dayOfWeek: 'WEDNESDAY',
+        focus: 'back',
+        exercises: [
+          { name: 'Pull-ups', order: 0, sets: [
+            { reps: 13 }, { reps: 11 }, { reps: 9 }, { reps: 7 },
+          ]},
+          { name: 'Pull-downs', order: 1, sets: [
+            { reps: 12, weightKg: 61 }, { reps: 10, weightKg: 68 }, { reps: 8, weightKg: 68 }, { reps: 8, weightKg: 68 },
+          ]},
+          { name: 'Low pulley row', order: 2, sets: [
+            { reps: 12, weightKg: 47 }, { reps: 12, weightKg: 47 }, { reps: 8, weightKg: 54 },
+          ]},
+          { name: 'Seated rows', order: 3, sets: [] },
+          { name: 'Deadlifts', order: 4, sets: [
+            { reps: 12, weightKg: 20 }, { reps: 6, weightKg: 32.5 }, { reps: 6, weightKg: 42.5 }, { reps: 6, weightKg: 42.5 },
+          ]},
+          { name: 'Bent over rows', order: 5, sets: [
+            { reps: 15, weightKg: 20 }, { reps: 8, weightKg: 32.5 }, { reps: 8, weightKg: 42.5 }, { reps: 6, weightKg: 42.5 },
+          ]},
+          { name: 'Straight arm pull downs', order: 6, sets: [
+            { notes: 'need to rehearse' },
+          ]},
+          { name: 'Low pulley row (2)', order: 7, sets: [
+            { reps: 12, weightKg: 47 }, { reps: 10, weightKg: 47 }, { reps: 8, weightKg: 47 },
+          ]},
+        ],
+      },
+      {
+        dayOfWeek: 'THURSDAY',
+        focus: 'shoulders/legs',
+        exercises: [
+          { name: 'Shoulder press', order: 0, sets: [
+            { reps: 10, weightKg: 20 }, { reps: 8, weightKg: 20 }, { reps: 7, weightKg: 20 },
+          ]},
+          { name: 'Squats', order: 1, sets: [
+            { reps: 10, weightKg: 42.5 }, { reps: 8, weightKg: 42.5 }, { reps: 8, weightKg: 42.5 }, { reps: 8, weightKg: 42.5 },
+          ]},
+          { name: 'Shoulders wide', order: 2, sets: [
+            { reps: 12, weightKg: 9 }, { reps: 12, weightKg: 10 }, { reps: 12, weightKg: 11 },
+          ]},
+          { name: 'Front raise', order: 3, sets: [
+            { reps: 16, weightKg: 17 }, { reps: 14, weightKg: 17 }, { reps: 12, weightKg: 17 },
+          ]},
+        ],
+      },
+      {
+        dayOfWeek: 'FRIDAY',
+        focus: 'chest',
+        exercises: [
+          { name: 'Barbells', order: 0, sets: [
+            { reps: 8, weightKg: 28 }, { reps: 7, weightKg: 28 }, { reps: 6, weightKg: 28 }, { reps: 5, weightKg: 28 },
+          ]},
+          { name: 'Cable chest', order: 1, sets: [
+            { reps: 9, weightKg: 17 }, { reps: 9, weightKg: 17 }, { reps: 8, weightKg: 17 },
+          ]},
+          { name: 'Over the neck', order: 2, sets: [
+            { reps: 8, weightKg: 34 }, { reps: 6, weightKg: 34, notes: 'to failure' },
+          ]},
+          { name: 'Dips', order: 3, sets: [
+            { reps: 18 }, { reps: 16 }, { reps: 13 },
+          ]},
+        ],
+      },
+      {
+        dayOfWeek: 'SATURDAY',
+        focus: 'abs/remainders',
+        exercises: [
+          { name: 'Deadlifts', order: 0, sets: [
+            { reps: 8, weightKg: 32.5 }, { reps: 8, weightKg: 42.5 }, { reps: 6, weightKg: 42.5 },
+          ]},
+          { name: 'Sit ups', order: 1, sets: [
+            { notes: '4 sets to failure' },
+          ]},
+          { name: 'Hanging leg raises', order: 2, sets: [
+            { reps: 9 }, { reps: 9 }, { reps: 7 },
+          ]},
+          { name: 'Cable twists', order: 3, sets: [
+            { reps: 12, weightKg: 14.5 }, { reps: 10, weightKg: 15.5 }, { reps: 8, weightKg: 16.5, notes: 'sides 20kg x12' },
+          ]},
+          { name: 'Cable crunches', order: 4, sets: [] },
+        ],
+      },
+    ];
+
+    // Create all days, exercises, and sets
+    for (const dayData of templateDays) {
+      const day = await prisma.day.create({
+        data: {
+          weekId: week.id,
+          dayOfWeek: dayData.dayOfWeek,
+          focus: dayData.focus,
+        },
+      });
+
+      for (const exData of dayData.exercises) {
+        const exercise = await prisma.exercise.create({
+          data: {
+            dayId: day.id,
+            name: exData.name,
+            order: exData.order,
+          },
+        });
+
+        for (const setData of exData.sets) {
+          await prisma.set.create({
+            data: {
+              exerciseId: exercise.id,
+              reps: (setData as any).reps ?? null,
+              weightKg: (setData as any).weightKg ?? null,
+              notes: (setData as any).notes ?? null,
+              feedback: null,
+              completed: false,
+            },
+          });
+        }
+      }
+    }
+
+    // Return the full week
+    const fullWeek = await prisma.week.findUnique({
+      where: { id: week.id },
+      include: {
+        days: {
+          include: {
+            exercises: {
+              include: { sets: true },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+      },
+    });
+
+    res.json(fullWeek);
+  } catch (err: any) {
+    console.error('Load template error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   const week = await prisma.week.findFirst({
     where: { id: Number(req.params.id), userId: req.userId },
