@@ -42,6 +42,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
           { dayOfWeek: 'THURSDAY', focus: '' },
           { dayOfWeek: 'FRIDAY', focus: '' },
           { dayOfWeek: 'SATURDAY', focus: '' },
+          { dayOfWeek: 'SUNDAY', focus: '' },
         ],
       },
     },
@@ -191,6 +192,10 @@ router.post('/load-template', async (req: AuthRequest, res: Response) => {
           ]},
           { name: 'Cable crunches', order: 4, sets: [] },
         ],
+      },
+      {
+        dayOfWeek: 'SUNDAY', focus: 'rest / cardio',
+        exercises: [],
       },
     ];
 

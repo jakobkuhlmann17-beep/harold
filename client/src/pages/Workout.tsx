@@ -7,8 +7,8 @@ interface ExerciseData { id: number; name: string; order: number; sets: SetData[
 interface DayData { id: number; dayOfWeek: string; focus: string; exercises: ExerciseData[]; }
 interface WeekData { id: number; weekNumber: number; days: DayData[]; }
 
-const DAY_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-const DAY_SHORT: Record<string, string> = { MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed', THURSDAY: 'Thu', FRIDAY: 'Fri', SATURDAY: 'Sat' };
+const DAY_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+const DAY_SHORT: Record<string, string> = { MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed', THURSDAY: 'Thu', FRIDAY: 'Fri', SATURDAY: 'Sat', SUNDAY: 'Sun' };
 
 const ACCENT_COLORS = ['border-l-primary', 'border-l-tertiary', 'border-l-secondary', 'border-l-primary-container', 'border-l-tertiary-container', 'border-l-outline'];
 
