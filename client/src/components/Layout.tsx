@@ -4,12 +4,14 @@ import { useAuth } from '../lib/auth';
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: 'dashboard', end: true },
   { to: '/workout', label: 'Workout', icon: 'fitness_center' },
+  { to: '/trends', label: 'Trends', icon: 'insights' },
   { to: '/nutrition', label: 'Nutrition', icon: 'restaurant' },
 ];
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Daily Pulse',
   '/workout': 'Workout Log',
+  '/trends': 'Trends',
   '/nutrition': 'Nutrition',
 };
 

@@ -7,6 +7,7 @@ import Welcome from './pages/Welcome';
 import Dashboard from './pages/Dashboard';
 import Workout from './pages/Workout';
 import Nutrition from './pages/Nutrition';
+import Trends from './pages/Trends';
 import type { ReactNode } from 'react';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -32,6 +33,7 @@ function AppRoutes() {
       >
         <Route index element={<Dashboard />} />
         <Route path="workout" element={<Workout />} />
+        <Route path="trends" element={<Trends />} />
         <Route path="nutrition" element={<Nutrition />} />
       </Route>
     </Routes>
