@@ -96,6 +96,19 @@ html {
   scroll-behavior: smooth;
 }
 
+.ai-pulse-glow {
+  box-shadow: 0 0 20px rgba(242, 109, 33, 0.2);
+  animation: pulse-glow 3s infinite alternate;
+}
+@keyframes pulse-glow {
+  from { box-shadow: 0 0 20px rgba(242, 109, 33, 0.1); }
+  to { box-shadow: 0 0 40px rgba(242, 109, 33, 0.3); }
+}
+.glass-nav {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
