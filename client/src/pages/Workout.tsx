@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import ExerciseAutocomplete from '../components/ExerciseAutocomplete';
+import ConfirmDialog from '../components/ConfirmDialog';
+import Toast from '../components/Toast';
 
 interface SetData { id: number; reps: number | null; weightKg: number | null; notes: string | null; feedback: string | null; completed: boolean; }
 interface ExerciseData { id: number; name: string; order: number; sets: SetData[]; }
@@ -31,6 +33,9 @@ export default function Workout() {
   const [shareCategory, setShareCategory] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; confirmStyle: 'error' | 'primary'; onConfirm: () => Promise<void> } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const showToast = useCallback((msg: string) => setToast(msg), []);
 
   const fetchWeeks = async () => { const { data } = await api.get('/weeks'); setWeeks(data); if (data.length > 0) setWeekIdx(data.length - 1); setLoading(false); };
   useEffect(() => {
@@ -57,6 +62,50 @@ export default function Workout() {
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span></div>;
+
+  const deleteWeek = () => {
+    if (!currentWeek) return;
+    const wn = currentWeek.weekNumber;
+    setConfirmDialog({
+      title: `Delete Week ${wn}?`,
+      message: 'This will permanently delete all exercises, sets and cardio sessions for this week. This cannot be undone.',
+      confirmLabel: 'Delete Week',
+      confirmStyle: 'error',
+      onConfirm: async () => {
+        await api.delete(`/weeks/${currentWeek.id}`);
+        setConfirmDialog(null);
+        showToast(`Week ${wn} deleted`);
+        const { data } = await api.get('/weeks');
+        setWeeks(data);
+        if (data.length > 0) setWeekIdx(data.length - 1);
+        else setWeekIdx(0);
+        setSelectedDay(0);
+        setLoading(false);
+      },
+    });
+  };
+
+  const recreateWeek = () => {
+    if (!currentWeek) return;
+    const wn = currentWeek.weekNumber;
+    setConfirmDialog({
+      title: `Recreate Week ${wn} from scratch?`,
+      message: 'This will delete all exercises and sets for this week but create a fresh empty week. You will start with empty days.',
+      confirmLabel: 'Recreate',
+      confirmStyle: 'primary',
+      onConfirm: async () => {
+        await api.delete(`/weeks/${currentWeek.id}`);
+        await api.post('/weeks');
+        setConfirmDialog(null);
+        showToast(`Week recreated \u2014 ready to fill in your exercises`);
+        const { data } = await api.get('/weeks');
+        setWeeks(data);
+        if (data.length > 0) setWeekIdx(data.length - 1);
+        setSelectedDay(0);
+        setLoading(false);
+      },
+    });
+  };
 
   const isLatestWeek = weekIdx === weeks.length - 1;
   const activityType = currentDay?.activityType || 'WORKOUT';
@@ -112,6 +161,16 @@ export default function Workout() {
           {currentWeek && hasCompletedSets && (
             <button onClick={() => setShareOpen(true)} className="bg-surface-container-high text-on-surface-variant rounded-full px-3 py-1.5 text-xs font-headline font-bold hover:bg-surface-container-highest transition-colors flex items-center gap-1">
               <span className="material-symbols-outlined text-[14px]">share</span> Share
+            </button>
+          )}
+          {currentWeek && (
+            <button onClick={recreateWeek} className="bg-surface-container-low rounded-full px-3 py-1.5 text-xs font-headline flex items-center gap-1 hover:bg-surface-container-high transition-colors text-on-surface-variant">
+              <span className="material-symbols-outlined text-[14px]">restart_alt</span> Recreate
+            </button>
+          )}
+          {currentWeek && (
+            <button onClick={deleteWeek} className="text-error border border-error/30 rounded-full px-3 py-1.5 text-xs font-headline flex items-center gap-1 hover:bg-error/5 transition-colors">
+              <span className="material-symbols-outlined text-[14px]">delete</span> Delete
             </button>
           )}
         </div>
@@ -248,6 +307,21 @@ export default function Workout() {
           </div>
         </>
       )}
+
+      {/* Confirm dialog */}
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          confirmStyle={confirmDialog.confirmStyle}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
+
+      {/* Toast */}
+      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
   );
 }
