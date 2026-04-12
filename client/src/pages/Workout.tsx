@@ -109,7 +109,7 @@ export default function Workout() {
     await fetchWeeks();
   };
 
-  if (loading) return <p className="text-gray-500">Loading...</p>;
+  if (loading) return <p className="text-outline font-body">Loading...</p>;
 
   const isLatestWeek = weekIdx === weeks.length - 1;
 
@@ -119,20 +119,20 @@ export default function Workout() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={() => setWeekIdx(Math.max(0, weekIdx - 1))} disabled={weekIdx === 0}
-            className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40">&larr;</button>
-          <span className="font-bold text-lg text-gray-800">
+            className="w-9 h-9 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center disabled:opacity-40 transition-colors text-on-surface-variant">&larr;</button>
+          <span className="font-heading font-bold text-lg text-on-surface">
             {currentWeek ? `Week ${currentWeek.weekNumber}` : 'No weeks'}
           </span>
           <button onClick={() => setWeekIdx(Math.min(weeks.length - 1, weekIdx + 1))} disabled={weekIdx >= weeks.length - 1}
-            className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40">&rarr;</button>
+            className="w-9 h-9 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center disabled:opacity-40 transition-colors text-on-surface-variant">&rarr;</button>
         </div>
         <div className="flex gap-2">
-          <button onClick={createEmptyWeek} className="px-3 py-1.5 bg-gray-600 text-white rounded text-sm hover:bg-gray-700">
+          <button onClick={createEmptyWeek} className="px-4 py-1.5 border-2 border-outline text-on-surface-variant rounded-full text-sm font-heading font-medium hover:bg-surface-container-high transition-colors">
             + New Week
           </button>
           {isLatestWeek && currentWeek && (
             <button onClick={generateNext} disabled={generating}
-              className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-50">
+              className="px-4 py-1.5 gradient-primary text-on-primary rounded-full text-sm font-heading font-medium disabled:opacity-50 hover:opacity-90 transition-opacity">
               {generating ? (
                 <span className="flex items-center gap-1">
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
@@ -144,23 +144,23 @@ export default function Workout() {
         </div>
       </div>
 
-      {!currentWeek && <p className="text-gray-500">Create a week to get started.</p>}
+      {!currentWeek && <p className="text-outline font-body">Create a week to get started.</p>}
 
       {currentWeek && (
         <>
           {/* Day tabs */}
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {sortedDays.map((day, i) => {
               const totalSets = day.exercises.flatMap((e) => e.sets).length;
               const doneSets = day.exercises.flatMap((e) => e.sets).filter((s) => s.completed).length;
               return (
                 <button key={day.id} onClick={() => setSelectedDay(i)}
-                  className={`flex-1 py-2 px-1 rounded-t text-sm font-medium border-b-2 transition ${
-                    i === selectedDay ? 'border-indigo-600 bg-white text-indigo-700' : 'border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  className={`flex-1 py-2.5 px-1 rounded-full text-sm font-heading font-medium transition-all ${
+                    i === selectedDay ? 'gradient-primary text-on-primary shadow-sm' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
                   }`}>
                   <div>{DAY_SHORT[day.dayOfWeek]}</div>
-                  <div className="text-xs capitalize">{day.focus || '—'}</div>
-                  <div className="text-xs text-gray-400">{doneSets}/{totalSets}</div>
+                  <div className="text-xs capitalize opacity-80">{day.focus || '\u2014'}</div>
+                  <div className="text-xs opacity-60">{doneSets}/{totalSets}</div>
                 </button>
               );
             })}
@@ -169,19 +169,19 @@ export default function Workout() {
           {/* Exercises */}
           {currentDay && (
             <div className="space-y-3">
-              {currentDay.exercises.length === 0 && <p className="text-sm text-gray-400">No exercises yet.</p>}
+              {currentDay.exercises.length === 0 && <p className="text-sm text-outline font-body">No exercises yet.</p>}
               {currentDay.exercises
                 .slice()
                 .sort((a, b) => a.order - b.order)
                 .map((ex) => (
-                <div key={ex.id} className="bg-white rounded-lg shadow p-4">
+                <div key={ex.id} className="bg-surface-container-lowest rounded-xl p-4 border-l-4 border-l-primary border border-outline-variant/20">
                   <div className="flex items-center justify-between mb-2">
-                    <EditableText value={ex.name} onSave={(v) => updateExerciseName(ex.id, v)} className="font-semibold text-gray-800" />
-                    <button onClick={() => deleteExercise(ex.id)} className="text-red-400 hover:text-red-600 text-sm">Delete</button>
+                    <EditableText value={ex.name} onSave={(v) => updateExerciseName(ex.id, v)} className="font-heading font-semibold text-on-surface" />
+                    <button onClick={() => deleteExercise(ex.id)} className="text-red-400 hover:text-red-600 text-sm font-body">Delete</button>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-gray-400 text-xs">
+                      <tr className="text-on-surface-variant text-xs font-body uppercase tracking-widest">
                         <th className="text-left w-8">#</th>
                         <th className="text-left">Reps</th>
                         <th className="text-left">Weight (kg)</th>
@@ -193,22 +193,22 @@ export default function Workout() {
                     </thead>
                     <tbody>
                       {ex.sets.map((s, si) => (
-                        <tr key={s.id} className="border-t border-gray-100">
-                          <td className="py-1 text-gray-400">{si + 1}</td>
+                        <tr key={s.id} className="border-t border-outline-variant/20">
+                          <td className="py-1.5 text-outline font-body">{si + 1}</td>
                           <td>
                             <EditableNumber value={s.reps} onSave={(v) => updateSet(s.id, 'reps', v)} />
                           </td>
                           <td>
                             <EditableNumber value={s.weightKg} onSave={(v) => updateSet(s.id, 'weightKg', v)} decimal />
                           </td>
-                          <td className="text-gray-400 text-xs">{s.notes || ''}</td>
+                          <td className="text-outline text-xs font-body">{s.notes || ''}</td>
                           <td>
                             <FeedbackInput value={s.feedback} onSave={(v) => updateSet(s.id, 'feedback', v)} />
                           </td>
                           <td>
                             <input type="checkbox" checked={s.completed}
                               onChange={(e) => updateSet(s.id, 'completed', e.target.checked)}
-                              className="accent-indigo-600" />
+                              className="accent-primary w-4 h-4" />
                           </td>
                           <td>
                             <button onClick={() => deleteSet(s.id)} className="text-red-300 hover:text-red-500">&times;</button>
@@ -217,15 +217,15 @@ export default function Workout() {
                       ))}
                     </tbody>
                   </table>
-                  <button onClick={() => addSet(ex)} className="mt-2 text-xs text-indigo-600 hover:underline">+ Add set</button>
+                  <button onClick={() => addSet(ex)} className="mt-2 text-xs text-primary font-heading font-medium border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/5 transition-colors">+ Add set</button>
                 </div>
               ))}
 
               <div className="flex gap-2">
                 <input value={newExName} onChange={(e) => setNewExName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addExercise()}
-                  placeholder="Exercise name" className="border rounded px-3 py-1.5 text-sm flex-1" />
-                <button onClick={addExercise} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+                  placeholder="Exercise name" className="border border-outline-variant rounded-lg px-3 py-2 text-sm flex-1 font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline text-on-surface" />
+                <button onClick={addExercise} className="px-4 py-2 gradient-primary text-on-primary rounded-full text-sm font-heading font-medium hover:opacity-90 transition-opacity">
                   Add Exercise
                 </button>
               </div>
@@ -246,10 +246,10 @@ function EditableText({ value, onSave, className }: { value: string; onSave: (v:
       <input value={text} onChange={(e) => setText(e.target.value)}
         onBlur={() => { onSave(text); setEditing(false); }}
         onKeyDown={(e) => { if (e.key === 'Enter') { onSave(text); setEditing(false); } }}
-        autoFocus className="border-b border-indigo-400 outline-none px-1 text-sm" />
+        autoFocus className="border-b-2 border-primary outline-none px-1 text-sm font-heading bg-transparent text-on-surface" />
     );
   }
-  return <span onClick={() => setEditing(true)} className={`cursor-pointer hover:text-indigo-600 ${className}`}>{value}</span>;
+  return <span onClick={() => setEditing(true)} className={`cursor-pointer hover:text-primary transition-colors ${className}`}>{value}</span>;
 }
 
 function EditableNumber({ value, onSave, decimal }: { value: number | null; onSave: (v: number | null) => void; decimal?: boolean }) {
@@ -271,13 +271,13 @@ function EditableNumber({ value, onSave, decimal }: { value: number | null; onSa
             setEditing(false);
           }
         }}
-        autoFocus className="w-16 border-b border-indigo-400 outline-none px-1 text-sm" />
+        autoFocus className="w-16 border-b-2 border-primary outline-none px-1 text-sm font-heading bg-transparent text-on-surface" />
     );
   }
   return (
     <span onClick={() => { setText(value?.toString() ?? ''); setEditing(true); }}
-      className="cursor-pointer hover:text-indigo-600 text-sm">
-      {value !== null && value !== undefined ? value : '—'}
+      className="cursor-pointer hover:text-primary text-sm font-heading transition-colors">
+      {value !== null && value !== undefined ? value : '\u2014'}
     </span>
   );
 }
@@ -298,12 +298,12 @@ function FeedbackInput({ value, onSave }: { value: string | null; onSave: (v: st
         onBlur={save}
         onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
         placeholder="How did this feel? (optional)"
-        autoFocus className="w-36 border-b border-gray-300 outline-none px-1 text-xs text-gray-600" />
+        autoFocus className="w-36 border-b border-outline-variant outline-none px-1 text-xs text-on-surface-variant font-body bg-transparent" />
     );
   }
   return (
     <span onClick={() => { setText(value ?? ''); setEditing(true); }}
-      className="cursor-pointer text-xs text-gray-400 italic hover:text-indigo-500">
+      className="cursor-pointer text-xs text-outline italic hover:text-primary font-body transition-colors">
       {value || 'add feedback'}
     </span>
   );

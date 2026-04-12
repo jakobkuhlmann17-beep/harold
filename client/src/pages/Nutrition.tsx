@@ -82,41 +82,45 @@ export default function Nutrition() {
     setDate(d);
   };
 
-  const bar = (val: number, max: number, color: string) => (
-    <div className="w-full bg-gray-200 rounded-full h-2.5">
-      <div className={`${color} h-2.5 rounded-full transition-all`} style={{ width: `${Math.min(100, (val / max) * 100)}%` }} />
-    </div>
-  );
+  const pct = (val: number, max: number) => Math.min(100, (val / max) * 100);
 
   return (
     <div className="space-y-5">
       {/* Date nav */}
       <div className="flex items-center gap-3">
-        <button onClick={() => shiftDate(-1)} className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300">&larr;</button>
-        <span className="font-bold text-lg text-gray-800">{fmtDate(date)}</span>
-        <button onClick={() => shiftDate(1)} className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300">&rarr;</button>
+        <button onClick={() => shiftDate(-1)} className="w-9 h-9 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center transition-colors text-on-surface-variant">&larr;</button>
+        <span className="font-heading font-bold text-lg text-on-surface">{fmtDate(date)}</span>
+        <button onClick={() => shiftDate(1)} className="w-9 h-9 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center transition-colors text-on-surface-variant">&rarr;</button>
       </div>
 
       {/* Macro summary */}
-      <div className="bg-white rounded-xl shadow p-5 space-y-3">
+      <div className="bg-surface-container-low rounded-xl p-5 space-y-4 border border-outline-variant/30">
         <div className="flex justify-between items-center">
-          <span className="text-gray-600 font-medium">Calories</span>
-          <span className="font-bold text-lg">{totals.cal.toLocaleString()} / {(user?.calorieTarget || 2000).toLocaleString()} kcal</span>
+          <span className="text-on-surface-variant font-heading font-medium text-sm uppercase tracking-widest">Calories</span>
+          <span className="font-heading font-bold text-lg text-on-surface">{totals.cal.toLocaleString()} / {(user?.calorieTarget || 2000).toLocaleString()} kcal</span>
         </div>
-        {bar(totals.cal, user?.calorieTarget || 2000, 'bg-emerald-500')}
+        <div className="w-full bg-surface-container-highest rounded-full h-3">
+          <div className="gradient-bar h-3 rounded-full transition-all" style={{ width: `${pct(totals.cal, user?.calorieTarget || 2000)}%` }} />
+        </div>
 
         <div className="grid grid-cols-3 gap-4 pt-2">
           <div>
-            <div className="flex justify-between text-sm"><span className="text-gray-500">Protein</span><span>{totals.pro.toFixed(0)}g / {user?.proteinTarget}g</span></div>
-            {bar(totals.pro, user?.proteinTarget || 150, 'bg-blue-500')}
+            <div className="flex justify-between text-sm font-body"><span className="text-on-surface-variant">Protein</span><span className="font-medium text-on-surface">{totals.pro.toFixed(0)}g / {user?.proteinTarget}g</span></div>
+            <div className="w-full bg-surface-container-highest rounded-full h-2 mt-1">
+              <div className="h-2 rounded-full transition-all bg-tertiary" style={{ width: `${pct(totals.pro, user?.proteinTarget || 150)}%` }} />
+            </div>
           </div>
           <div>
-            <div className="flex justify-between text-sm"><span className="text-gray-500">Carbs</span><span>{totals.carb.toFixed(0)}g / {user?.carbsTarget}g</span></div>
-            {bar(totals.carb, user?.carbsTarget || 200, 'bg-amber-500')}
+            <div className="flex justify-between text-sm font-body"><span className="text-on-surface-variant">Carbs</span><span className="font-medium text-on-surface">{totals.carb.toFixed(0)}g / {user?.carbsTarget}g</span></div>
+            <div className="w-full bg-surface-container-highest rounded-full h-2 mt-1">
+              <div className="h-2 rounded-full transition-all bg-secondary" style={{ width: `${pct(totals.carb, user?.carbsTarget || 200)}%` }} />
+            </div>
           </div>
           <div>
-            <div className="flex justify-between text-sm"><span className="text-gray-500">Fat</span><span>{totals.fat.toFixed(0)}g / {user?.fatTarget}g</span></div>
-            {bar(totals.fat, user?.fatTarget || 65, 'bg-rose-500')}
+            <div className="flex justify-between text-sm font-body"><span className="text-on-surface-variant">Fat</span><span className="font-medium text-on-surface">{totals.fat.toFixed(0)}g / {user?.fatTarget}g</span></div>
+            <div className="w-full bg-surface-container-highest rounded-full h-2 mt-1">
+              <div className="h-2 rounded-full transition-all bg-primary" style={{ width: `${pct(totals.fat, user?.fatTarget || 65)}%` }} />
+            </div>
           </div>
         </div>
       </div>
@@ -124,60 +128,60 @@ export default function Nutrition() {
       {/* Meal list */}
       <div className="space-y-2">
         {meals.map((m) => (
-          <div key={m.id} className="bg-white rounded-lg shadow p-3 flex justify-between items-center">
-            <div>
-              <span className="font-medium text-gray-800">{m.name}</span>
-              <span className="text-sm text-gray-400 ml-3">{m.calories} kcal</span>
-              <span className="text-xs text-gray-400 ml-2">P:{m.proteinG}g C:{m.carbsG}g F:{m.fatG}g</span>
+          <div key={m.id} className="bg-surface-container-low rounded-xl p-3 flex justify-between items-center border border-outline-variant/20">
+            <div className="font-body">
+              <span className="font-medium text-on-surface">{m.name}</span>
+              <span className="text-sm text-outline ml-3">{m.calories} kcal</span>
+              <span className="text-xs text-outline ml-2">P:{m.proteinG}g C:{m.carbsG}g F:{m.fatG}g</span>
             </div>
-            <button onClick={() => deleteMeal(m.id)} className="text-red-400 hover:text-red-600 text-sm">Delete</button>
+            <button onClick={() => deleteMeal(m.id)} className="text-red-400 hover:text-red-600 text-sm font-body">Delete</button>
           </div>
         ))}
-        {meals.length === 0 && <p className="text-gray-400 text-sm">No meals logged for this day.</p>}
+        {meals.length === 0 && <p className="text-outline text-sm font-body">No meals logged for this day.</p>}
       </div>
 
       {/* Add meal form */}
-      <form onSubmit={addMeal} className="bg-white rounded-xl shadow p-4 space-y-3">
-        <h3 className="font-semibold text-gray-700">Add Meal</h3>
+      <form onSubmit={addMeal} className="bg-surface-container-low rounded-xl p-4 space-y-3 border border-outline-variant/30">
+        <h3 className="font-heading font-semibold text-on-surface">Add Meal</h3>
         <div className="grid grid-cols-5 gap-2">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Meal name" required
-            className="border rounded px-2 py-1.5 text-sm col-span-5" />
+            className="border border-outline-variant rounded-lg px-2 py-1.5 text-sm col-span-5 font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline text-on-surface" />
           <input value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="Calories" type="number" required
-            className="border rounded px-2 py-1.5 text-sm" />
+            className="border border-outline-variant rounded-lg px-2 py-1.5 text-sm font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline text-on-surface" />
           <input value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="Protein (g)" type="number" required
-            className="border rounded px-2 py-1.5 text-sm" />
+            className="border border-outline-variant rounded-lg px-2 py-1.5 text-sm font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline text-on-surface" />
           <input value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="Carbs (g)" type="number" required
-            className="border rounded px-2 py-1.5 text-sm" />
+            className="border border-outline-variant rounded-lg px-2 py-1.5 text-sm font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline text-on-surface" />
           <input value={fat} onChange={(e) => setFat(e.target.value)} placeholder="Fat (g)" type="number" required
-            className="border rounded px-2 py-1.5 text-sm" />
-          <button type="submit" className="bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 py-1.5">Add</button>
+            className="border border-outline-variant rounded-lg px-2 py-1.5 text-sm font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline text-on-surface" />
+          <button type="submit" className="gradient-primary text-on-primary rounded-full text-sm font-heading font-medium hover:opacity-90 transition-opacity py-1.5">Add</button>
         </div>
       </form>
 
       {/* Targets */}
-      <div className="bg-white rounded-xl shadow p-4">
-        <button onClick={() => setShowTargets(!showTargets)} className="font-semibold text-gray-700 w-full text-left flex justify-between">
-          Set My Targets <span>{showTargets ? '−' : '+'}</span>
+      <div className="bg-surface-container-low rounded-xl p-4 border border-outline-variant/30">
+        <button onClick={() => setShowTargets(!showTargets)} className="font-heading font-semibold text-on-surface w-full text-left flex justify-between">
+          Set My Targets <span className="text-on-surface-variant">{showTargets ? '\u2212' : '+'}</span>
         </button>
         {showTargets && (
           <div className="mt-3 grid grid-cols-4 gap-2">
             <div>
-              <label className="text-xs text-gray-500">Calories</label>
-              <input value={calTarget} onChange={(e) => setCalTarget(Number(e.target.value))} type="number" className="border rounded px-2 py-1 text-sm w-full" />
+              <label className="text-xs text-on-surface-variant font-body uppercase tracking-widest">Calories</label>
+              <input value={calTarget} onChange={(e) => setCalTarget(Number(e.target.value))} type="number" className="border border-outline-variant rounded-lg px-2 py-1 text-sm w-full font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 text-on-surface" />
             </div>
             <div>
-              <label className="text-xs text-gray-500">Protein (g)</label>
-              <input value={proTarget} onChange={(e) => setProTarget(Number(e.target.value))} type="number" className="border rounded px-2 py-1 text-sm w-full" />
+              <label className="text-xs text-on-surface-variant font-body uppercase tracking-widest">Protein (g)</label>
+              <input value={proTarget} onChange={(e) => setProTarget(Number(e.target.value))} type="number" className="border border-outline-variant rounded-lg px-2 py-1 text-sm w-full font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 text-on-surface" />
             </div>
             <div>
-              <label className="text-xs text-gray-500">Carbs (g)</label>
-              <input value={carbTarget} onChange={(e) => setCarbTarget(Number(e.target.value))} type="number" className="border rounded px-2 py-1 text-sm w-full" />
+              <label className="text-xs text-on-surface-variant font-body uppercase tracking-widest">Carbs (g)</label>
+              <input value={carbTarget} onChange={(e) => setCarbTarget(Number(e.target.value))} type="number" className="border border-outline-variant rounded-lg px-2 py-1 text-sm w-full font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 text-on-surface" />
             </div>
             <div>
-              <label className="text-xs text-gray-500">Fat (g)</label>
-              <input value={fatTarget} onChange={(e) => setFatTarget(Number(e.target.value))} type="number" className="border rounded px-2 py-1 text-sm w-full" />
+              <label className="text-xs text-on-surface-variant font-body uppercase tracking-widest">Fat (g)</label>
+              <input value={fatTarget} onChange={(e) => setFatTarget(Number(e.target.value))} type="number" className="border border-outline-variant rounded-lg px-2 py-1 text-sm w-full font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 text-on-surface" />
             </div>
-            <button onClick={saveTargets} className="col-span-4 bg-indigo-600 text-white rounded py-1.5 text-sm hover:bg-indigo-700 mt-1">
+            <button onClick={saveTargets} className="col-span-4 gradient-primary text-on-primary rounded-full py-1.5 text-sm font-heading font-medium hover:opacity-90 transition-opacity mt-1">
               Save Targets
             </button>
           </div>

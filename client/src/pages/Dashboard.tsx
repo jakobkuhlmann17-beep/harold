@@ -53,45 +53,47 @@ export default function Dashboard() {
     });
   }, []);
 
+  const calPct = Math.min(100, (nutrition.calories / (user?.calorieTarget || 2000)) * 100);
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800">Welcome back, {user?.username}!</h2>
+      <h2 className="text-2xl font-heading font-bold text-on-surface">Welcome back, {user?.username}!</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Today's Workout */}
-        <div className="bg-white rounded-xl shadow p-5">
-          <h3 className="font-semibold text-gray-700 mb-2">Today's Workout</h3>
+        <div className="bg-surface-container-low rounded-xl p-5 border border-outline-variant/30">
+          <h3 className="font-heading font-semibold text-on-surface-variant mb-2 text-sm uppercase tracking-widest">Today's Workout</h3>
           {todayWorkout ? (
             <>
-              <p className="text-lg font-bold text-indigo-600 capitalize">{todayWorkout.focus}</p>
-              <p className="text-sm text-gray-500">{todayWorkout.completed} / {todayWorkout.total} sets completed</p>
+              <p className="text-lg font-heading font-bold text-primary capitalize">{todayWorkout.focus}</p>
+              <p className="text-sm text-on-surface-variant font-body">{todayWorkout.completed} / {todayWorkout.total} sets completed</p>
             </>
           ) : (
-            <p className="text-sm text-gray-500">No workout scheduled</p>
+            <p className="text-sm text-outline font-body">No workout scheduled</p>
           )}
-          <Link to="/workout" className="mt-3 inline-block text-sm text-indigo-600 hover:underline">Go to workouts &rarr;</Link>
+          <Link to="/workout" className="mt-3 inline-block text-sm text-primary font-medium font-body hover:underline">Go to workouts &rarr;</Link>
         </div>
 
         {/* Today's Nutrition */}
-        <div className="bg-white rounded-xl shadow p-5">
-          <h3 className="font-semibold text-gray-700 mb-2">Today's Nutrition</h3>
-          <p className="text-lg font-bold text-emerald-600">
+        <div className="bg-surface-container-low rounded-xl p-5 border border-outline-variant/30">
+          <h3 className="font-heading font-semibold text-on-surface-variant mb-2 text-sm uppercase tracking-widest">Today's Nutrition</h3>
+          <p className="text-lg font-heading font-bold text-on-surface">
             {nutrition.calories.toLocaleString()} / {(user?.calorieTarget || 2000).toLocaleString()} kcal
           </p>
-          <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+          <div className="w-full bg-surface-container-highest rounded-full h-2.5 mt-2">
             <div
-              className="bg-emerald-500 h-2.5 rounded-full transition-all"
-              style={{ width: `${Math.min(100, (nutrition.calories / (user?.calorieTarget || 2000)) * 100)}%` }}
+              className="gradient-bar h-2.5 rounded-full transition-all"
+              style={{ width: `${calPct}%` }}
             />
           </div>
-          <Link to="/nutrition" className="mt-3 inline-block text-sm text-indigo-600 hover:underline">Go to nutrition &rarr;</Link>
+          <Link to="/nutrition" className="mt-3 inline-block text-sm text-primary font-medium font-body hover:underline">Go to nutrition &rarr;</Link>
         </div>
 
         {/* Streak */}
-        <div className="bg-white rounded-xl shadow p-5">
-          <h3 className="font-semibold text-gray-700 mb-2">Workout Streak</h3>
-          <p className="text-3xl font-bold text-orange-500">{streak} days</p>
-          <p className="text-sm text-gray-500 mt-1">Consecutive days with completed sets</p>
+        <div className="bg-surface-container-low rounded-xl p-5 border border-outline-variant/30">
+          <h3 className="font-heading font-semibold text-on-surface-variant mb-2 text-sm uppercase tracking-widest">Workout Streak</h3>
+          <p className="text-3xl font-heading font-bold text-primary">{streak} days</p>
+          <p className="text-sm text-on-surface-variant mt-1 font-body">Consecutive days with completed sets</p>
         </div>
       </div>
     </div>
