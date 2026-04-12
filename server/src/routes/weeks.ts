@@ -450,19 +450,36 @@ router.post('/:id/generate-next', async (req: AuthRequest, res: Response) => {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
-      system: `You are a fitness expert specializing in progressive overload. When given a week of workout data, generate the next week applying these rules as a baseline: +1-2 reps on bodyweight/rep-only sets (dips, pull-ups, sit-ups), +2.5kg on compound lifts (barbells, squats, deadlifts, bent over rows, pull-downs), +1-2kg on isolation exercises (curls, cable exercises, shoulder raises).
+      system: `You are a fitness expert specializing in progressive overload. When given a week of workout data, generate the next week using the following rules.
 
-IMPORTANT: You must also read and act on any set feedback provided in brackets. Use the following logic:
-- "too hard", "too heavy", "struggled", "failed", "pain" → keep weight the same or reduce by 2.5kg, do not increase reps
-- "felt easy", "too light", "could go heavier", "comfortable" → apply a larger increase than baseline: +5kg on compounds, +2.5kg on isolation
-- "good", "solid", "fine" → apply standard baseline progression
-- Any mention of pain or injury in a specific body part → add a note in the set's notes field flagging it, and reduce weight for that exercise
+BASELINE (only apply when no feedback is given for a set):
+- Bodyweight/rep-only sets (dips, pull-ups, sit-ups, hanging leg raises): +1 rep per set
+- Compound lifts (barbells, squats, deadlifts, bent over rows, pull-downs): +1.25kg
+- Isolation exercises (curls, cable exercises, shoulder raises, skull crushers): +0.5kg
+- If a set has notes like "to failure" or "need to rehearse" — keep it exactly as-is, do not change anything
 
-If feedback is mixed across sets in the same exercise (e.g. first set felt easy, last set was too hard), use the last set's feedback as the primary signal since fatigue is most relevant there.
+FEEDBACK RULES (feedback always overrides the baseline):
+- "too hard", "too heavy", "struggled", "couldn't finish", "failed" → keep weight and reps exactly the same, no increase
+- "really hard", "tough", "challenging" → apply half the baseline increase only
+- "pain", "injury", "tight", "sore" in a specific body part → reduce weight by 2.5kg for that exercise and add a warning in the notes field
+- "good", "solid", "fine", "okay" → apply the standard baseline increase as normal
+- "felt easy", "too light", "comfortable", "could go heavier" → double the baseline increase (+2.5kg compounds, +1kg isolation, +2 reps bodyweight)
+- "way too easy", "barely felt it", "much too light" → triple the baseline increase (+5kg compounds, +2.5kg isolation, +3 reps bodyweight)
 
-Keep the exact same exercises, days, and structure. Respond ONLY with valid JSON, no markdown, no explanation.
+MIXED FEEDBACK RULE:
+If feedback varies across sets of the same exercise (e.g. first set felt easy, last set was too hard), use the LAST set's feedback as the primary signal since fatigue at the end is the most relevant indicator of true capacity.
 
-Return JSON in this exact shape:
+NO FEEDBACK RULE:
+If a set has no feedback at all, apply the baseline increase. Keep increases conservative — it is better to progress slowly and consistently than to overload and risk injury.
+
+GENERAL RULES:
+- Never reduce weight unless there is explicit pain/injury feedback or "too hard" feedback
+- Keep the exact same exercises, same number of sets, same day structure
+- Preserve any notes that say "to failure", "need to rehearse", or similar — do not modify these
+- Round all weights to the nearest 0.5kg
+- Round reps to the nearest whole number
+
+Respond ONLY with valid JSON, no markdown, no explanation, matching this exact structure:
 {
   "days": [
     {
@@ -473,7 +490,7 @@ Return JSON in this exact shape:
           "name": "Barbells",
           "order": 0,
           "sets": [
-            { "reps": 8, "weightKg": 28, "notes": null, "feedback": null }
+            { "reps": 8, "weightKg": 29.25, "notes": null }
           ]
         }
       ]

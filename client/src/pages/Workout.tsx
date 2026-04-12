@@ -47,7 +47,18 @@ export default function Workout() {
   const currentDay = sortedDays[selectedDay];
 
   const createEmptyWeek = async () => { await api.post('/weeks'); await fetchWeeks(); };
-  const generateNext = async () => { if (!currentWeek) return; setGenerating(true); try { await api.post(`/weeks/${currentWeek.id}/generate-next`); await fetchWeeks(); } catch (err: any) { alert(err.response?.data?.error || 'Generation failed'); } setGenerating(false); };
+  const generateNext = async () => {
+    if (!currentWeek) return;
+    setGenerating(true);
+    try {
+      await api.post(`/weeks/${currentWeek.id}/generate-next`);
+      await fetchWeeks();
+      showToast(`Week ${currentWeek.weekNumber + 1} generated with progressive overload!`);
+    } catch (err: any) {
+      showToast(err.response?.data?.error || 'Generation failed');
+    }
+    setGenerating(false);
+  };
   const addExercise = async (nameOverride?: string) => { const name = (nameOverride || newExName).trim(); if (!currentDay || !name) return; await api.post('/exercises', { dayId: currentDay.id, name, order: currentDay.exercises.length }); setNewExName(''); await fetchWeeks(); api.get('/exercises/history').then(({ data }) => setExerciseHistory(data)).catch(() => {}); };
   const deleteExercise = async (exId: number) => { await api.delete(`/exercises/${exId}`); await fetchWeeks(); };
   const addSet = async (exercise: ExerciseData) => { const last = exercise.sets[exercise.sets.length - 1]; await api.post('/sets', { exerciseId: exercise.id, reps: last?.reps ?? null, weightKg: last?.weightKg ?? null }); await fetchWeeks(); };
@@ -152,9 +163,12 @@ export default function Workout() {
           <button onClick={createEmptyWeek} className="hearth-glow text-on-primary rounded-full px-3 py-1.5 text-xs font-headline font-bold hover:opacity-90 transition-opacity ml-1">+ New</button>
           {isLatestWeek && currentWeek && (
             <button onClick={generateNext} disabled={generating}
-              className="hearth-glow text-on-primary rounded-full px-3 py-1.5 text-xs font-headline font-bold disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center gap-1">
-              {generating && <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>}
-              {generating ? 'Generating...' : 'Generate Next'}
+              className="hearth-glow text-white rounded-full px-5 py-2 text-sm font-headline font-bold disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center gap-2">
+              {generating ? (
+                <><span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span> Generating...</>
+              ) : (
+                <><span className="material-symbols-outlined text-[16px]">auto_awesome</span> Generate Next Week</>
+              )}
             </button>
           )}
           {currentWeek && hasCompletedSets && (
@@ -174,6 +188,14 @@ export default function Workout() {
           )}
         </div>
       </div>
+
+      {/* AI generating info bar */}
+      {generating && currentWeek && (
+        <div className="bg-primary-fixed/30 rounded-xl px-4 py-3 text-sm text-primary font-body flex items-center gap-2">
+          <span className="material-symbols-outlined animate-spin text-[18px]">auto_awesome</span>
+          Claude is analysing your Week {currentWeek.weekNumber} feedback and applying progressive overload &mdash; this takes about 10 seconds...
+        </div>
+      )}
 
       {/* Share as Pulse modal */}
       {shareOpen && currentWeek && (() => {
