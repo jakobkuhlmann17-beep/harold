@@ -3,7 +3,7 @@ services:
     name: harold-api
     env: node
     rootDir: server
-    buildCommand: npm install && npx prisma generate && npm run build && npx prisma migrate deploy
+    buildCommand: npm install && npm run build && npx prisma migrate deploy
     startCommand: npm start
     envVars:
       - key: DATABASE_URL
