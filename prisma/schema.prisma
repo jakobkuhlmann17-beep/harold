@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  email         String   @unique
+  passwordHash  String
+  calorieTarget Int      @default(2000)
+  proteinTarget Int      @default(150)
+  carbsTarget   Int      @default(200)
+  fatTarget     Int      @default(65)
+  createdAt     DateTime @default(now())
+  weeks         Week[]
+  meals         Meal[]
+}
+
+model Week {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  weekNumber Int
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  days       Day[]
+}
+
+model Day {
+  id        Int       @id @default(autoincrement())
+  weekId    Int
+  dayOfWeek String
+  focus     String
+  week      Week      @relation(fields: [weekId], references: [id])
+  exercises Exercise[]
+}
+
+model Exercise {
+  id    Int    @id @default(autoincrement())
+  dayId Int
+  name  String
+  order Int    @default(0)
+  day   Day    @relation(fields: [dayId], references: [id])
+  sets  Set[]
+}
+
+model Set {
+  id         Int      @id @default(autoincrement())
+  exerciseId Int
+  reps       Int?
+  weightKg   Float?
+  notes      String?
+  feedback   String?
+  completed  Boolean  @default(false)
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+}
+
+model Meal {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  date      DateTime
+  name      String
+  calories  Int
+  proteinG  Float
+  carbsG    Float
+  fatG      Float
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
