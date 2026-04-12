@@ -26,6 +26,11 @@ export default function Workout() {
   const [generating, setGenerating] = useState(false);
   const [newExName, setNewExName] = useState('');
   const [exerciseHistory, setExerciseHistory] = useState<{ name: string; count: number }[]>([]);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareContent, setShareContent] = useState('');
+  const [shareCategory, setShareCategory] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
 
   const fetchWeeks = async () => { const { data } = await api.get('/weeks'); setWeeks(data); if (data.length > 0) setWeekIdx(data.length - 1); setLoading(false); };
   useEffect(() => {
@@ -55,6 +60,18 @@ export default function Workout() {
 
   const isLatestWeek = weekIdx === weeks.length - 1;
   const activityType = currentDay?.activityType || 'WORKOUT';
+  const hasCompletedSets = currentWeek?.days?.some((d: any) => d.exercises?.some((e: any) => e.sets?.some((s: any) => s.completed))) || false;
+
+  const shareWorkout = async () => {
+    if (!currentWeek) return;
+    setSharing(true);
+    try {
+      await api.post('/community/posts/share-workout', { weekId: currentWeek.id, content: shareContent || `Just completed Week ${currentWeek.weekNumber}!`, category: shareCategory });
+      setShareOpen(false); setShareContent(''); setShareCategory(null);
+      setShareSuccess(true); setTimeout(() => setShareSuccess(false), 3000);
+    } catch (err: any) { alert(err.response?.data?.error || 'Failed to share'); }
+    setSharing(false);
+  };
 
   // Stats for right sidebar (workout mode)
   const totalSetsDay = currentDay?.exercises.flatMap(e => e.sets).length || 0;
@@ -92,8 +109,51 @@ export default function Workout() {
               {generating ? 'Generating...' : 'Generate Next'}
             </button>
           )}
+          {currentWeek && hasCompletedSets && (
+            <button onClick={() => setShareOpen(true)} className="bg-surface-container-high text-on-surface-variant rounded-full px-3 py-1.5 text-xs font-headline font-bold hover:bg-surface-container-highest transition-colors flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">share</span> Share
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Share success toast */}
+      {shareSuccess && (
+        <div className="fixed top-20 right-6 z-50 bg-[#e8f5e9] text-[#2e7d32] rounded-xl px-5 py-3 shadow-lg font-headline font-bold text-sm flex items-center gap-2 animate-pulse">
+          <span className="material-symbols-outlined text-[18px]">check_circle</span> Workout shared to community!
+        </div>
+      )}
+
+      {/* Share modal */}
+      {shareOpen && currentWeek && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => setShareOpen(false)}>
+          <div className="bg-surface-container-lowest rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-headline font-bold text-xl text-on-surface">Share your workout</h3>
+            <div className="bg-surface-container-low rounded-xl p-4">
+              <p className="font-headline font-bold text-sm text-on-surface">Week {currentWeek.weekNumber}</p>
+              <p className="text-xs text-on-surface-variant font-body">
+                {currentWeek.days?.reduce((s: number, d: any) => s + (d.exercises?.flatMap((e: any) => e.sets).filter((s: any) => s.completed).length || 0), 0)} sets completed &middot; {currentWeek.days?.reduce((s: number, d: any) => s + (d.exercises?.length || 0), 0)} exercises
+              </p>
+            </div>
+            <textarea value={shareContent} onChange={(e) => setShareContent(e.target.value)} placeholder="Add a caption..." rows={3}
+              className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm font-body text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
+            <div className="flex flex-wrap gap-2">
+              {['Morning Grit', 'Fueling', 'Strength Focus', 'Recovery'].map((c) => (
+                <button key={c} onClick={() => setShareCategory(shareCategory === c ? null : c)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-label transition-all ${shareCategory === c ? 'hearth-glow text-on-primary' : 'bg-surface-container-low text-on-surface-variant'}`}>{c}</button>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShareOpen(false)} className="px-4 py-2 text-sm font-headline text-on-surface-variant">Cancel</button>
+              <button onClick={shareWorkout} disabled={sharing}
+                className="hearth-glow text-on-primary rounded-full px-6 py-2 text-sm font-headline font-bold hover:opacity-90 disabled:opacity-50 flex items-center gap-1">
+                {sharing && <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>}
+                Post to Community &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!currentWeek && (
         <div className="bg-surface-container-lowest rounded-3xl p-12 text-center">
