@@ -50,6 +50,27 @@ export default function Nutrition() {
   const [estimating, setEstimating] = useState(false);
   const [estimate, setEstimate] = useState<Estimate | null>(null);
 
+  // Body weight
+  const [bwEntries, setBwEntries] = useState<{ id: number; weightKg: number; date: string; notes: string | null }[]>([]);
+  const [bwWeight, setBwWeight] = useState('');
+  const [bwDate, setBwDate] = useState(new Date().toISOString().split('T')[0]);
+  const [bwNotes, setBwNotes] = useState('');
+  const [bwRange, setBwRange] = useState<'2w' | '1m' | '3m' | 'all'>('1m');
+
+  const fetchBW = async () => { const { data } = await api.get('/trends/body-weight'); setBwEntries(data); };
+  useEffect(() => { fetchBW(); }, []);
+
+  const addBW = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bwWeight) return;
+    await api.post('/trends/body-weight', { weightKg: Number(bwWeight), date: bwDate, notes: bwNotes || undefined });
+    setBwWeight(''); setBwNotes('');
+    fetchBW();
+    showToast('Weight logged!');
+  };
+
+  const deleteBW = async (id: number) => { await api.delete(`/trends/body-weight/${id}`); fetchBW(); };
+
   // Targets
   const [calTarget, setCalTarget] = useState(user?.calorieTarget ?? 2000);
   const [proTarget, setProTarget] = useState(user?.proteinTarget ?? 150);
@@ -276,6 +297,66 @@ export default function Nutrition() {
         ))}
       </div>
 
+      {/* Body Weight Tracker */}
+      <div>
+        <p className="uppercase tracking-widest text-xs font-bold text-tertiary font-label mb-1">Body Composition</p>
+        <h3 className="font-headline text-2xl font-bold text-on-surface mb-4">Body Weight Tracker</h3>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Chart */}
+        <div className="lg:col-span-7 bg-surface-container-lowest rounded-3xl p-6 lg:p-8 shadow-sm">
+          <div className="flex gap-2 mb-4">
+            {([['2w', '2 weeks'], ['1m', '1 month'], ['3m', '3 months'], ['all', 'All time']] as const).map(([k, l]) => (
+              <button key={k} onClick={() => setBwRange(k)}
+                className={`rounded-full px-3 py-1 text-xs font-headline font-bold transition-all ${bwRange === k ? 'hearth-glow text-white' : 'bg-surface-container-low text-on-surface-variant'}`}>{l}</button>
+            ))}
+          </div>
+          <BWChart entries={bwEntries} range={bwRange} />
+        </div>
+        {/* Log + stats */}
+        <div className="lg:col-span-5 space-y-4">
+          {bwEntries.length > 0 && (() => {
+            const latest = bwEntries[bwEntries.length - 1];
+            const first = bwEntries[0];
+            const weekAgo = bwEntries.filter(e => new Date(e.date) <= new Date(Date.now() - 7 * 864e5)).pop();
+            const changeSinceStart = latest.weightKg - first.weightKg;
+            const changeSinceWeek = weekAgo ? latest.weightKg - weekAgo.weightKg : null;
+            return (
+              <div className="bg-surface-container-lowest rounded-2xl p-6">
+                <p className="font-headline text-4xl font-black text-primary">{latest.weightKg} <span className="text-lg text-on-surface-variant">kg</span></p>
+                <p className="text-xs text-on-surface-variant font-label mt-1">Last logged: {latest.date}</p>
+                <div className="flex gap-4 mt-3">
+                  <span className={`text-xs font-headline font-bold ${changeSinceStart <= 0 ? 'text-[#2e7d32]' : 'text-error'}`}>{changeSinceStart >= 0 ? '+' : ''}{changeSinceStart.toFixed(1)} kg since start</span>
+                  {changeSinceWeek !== null && <span className={`text-xs font-headline font-bold ${changeSinceWeek <= 0 ? 'text-[#2e7d32]' : 'text-error'}`}>{changeSinceWeek >= 0 ? '+' : ''}{changeSinceWeek.toFixed(1)} kg this week</span>}
+                </div>
+              </div>
+            );
+          })()}
+          <form onSubmit={addBW} className="bg-surface-container-lowest rounded-2xl p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <input type="number" step="0.1" value={bwWeight} onChange={(e) => setBwWeight(e.target.value)} placeholder="0.0" required
+                className="font-headline font-black text-2xl bg-surface-container-low rounded-xl p-3 w-24 text-center focus:outline-none focus:ring-2 focus:ring-primary/40 text-on-surface" />
+              <span className="font-label text-on-surface-variant">kg</span>
+            </div>
+            <input type="date" value={bwDate} onChange={(e) => setBwDate(e.target.value)}
+              className="w-full bg-surface-container-low rounded-lg px-3 py-2 text-sm font-body text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            <input value={bwNotes} onChange={(e) => setBwNotes(e.target.value)} placeholder="Morning weigh-in, after breakfast, etc."
+              className="w-full bg-surface-container-low rounded-lg px-3 py-2 text-sm font-body placeholder:text-outline text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            <button type="submit" className="hearth-glow text-white rounded-full px-6 py-3 font-headline font-bold w-full hover:opacity-90 transition-opacity text-sm">Log Weight</button>
+          </form>
+          {bwEntries.length > 0 && (
+            <div className="space-y-1">
+              {bwEntries.slice(-5).reverse().map((e) => (
+                <div key={e.id} className="bg-surface-container-low rounded-xl px-4 py-3 flex justify-between items-center group">
+                  <div><span className="font-headline font-bold text-sm text-on-surface">{e.weightKg} kg</span><span className="text-xs text-on-surface-variant font-label ml-2">{e.date}</span>{e.notes && <span className="text-xs text-outline font-body ml-2 italic">{e.notes}</span>}</div>
+                  <button onClick={() => deleteBW(e.id)} className="text-outline-variant hover:text-error transition-colors opacity-0 group-hover:opacity-100"><span className="material-symbols-outlined text-[16px]">delete</span></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Smart Macro Targets */}
       <div className="bg-surface-container-low rounded-xl p-4 border border-outline-variant/20">
         <button onClick={() => setShowTargets(!showTargets)} className="font-headline font-semibold text-on-surface w-full text-left flex justify-between items-center">
@@ -351,5 +432,47 @@ function IncrementRow({ label, value, onChange, step, onInc, onDec }: {
       <button type="button" onClick={onInc} className="w-9 h-9 rounded-full bg-surface-container-high hover:bg-surface-container-highest font-headline font-bold text-lg flex items-center justify-center text-on-surface-variant transition-colors">+</button>
       <span className="text-sm text-on-surface-variant font-label flex-1">{label}</span>
     </div>
+  );
+}
+
+function BWChart({ entries, range }: { entries: { weightKg: number; date: string }[]; range: string }) {
+  const now = Date.now();
+  const rangeMs: Record<string, number> = { '2w': 14 * 864e5, '1m': 30 * 864e5, '3m': 90 * 864e5, all: Infinity };
+  const cutoff = rangeMs[range] ?? Infinity;
+  const filtered = cutoff === Infinity ? entries : entries.filter(e => now - new Date(e.date).getTime() < cutoff);
+
+  if (filtered.length < 2) return (
+    <div className="h-48 flex items-center justify-center"><p className="text-on-surface-variant font-body italic text-sm">Log your weight daily to see your trend</p></div>
+  );
+
+  const W = 600; const H = 200; const PAD = { t: 20, r: 20, b: 30, l: 45 };
+  const cw = W - PAD.l - PAD.r; const ch = H - PAD.t - PAD.b;
+  const weights = filtered.map(e => e.weightKg);
+  const maxW = Math.max(...weights); const minW = Math.min(...weights);
+  const range_ = maxW - minW || 1;
+
+  const points = filtered.map((e, i) => ({
+    x: PAD.l + (i / (filtered.length - 1)) * cw,
+    y: PAD.t + ch - ((e.weightKg - minW) / range_) * ch,
+    ...e,
+  }));
+
+  const polyline = points.map(p => `${p.x},${p.y}`).join(' ');
+  const area = `M${points[0].x},${PAD.t + ch} ${points.map(p => `L${p.x},${p.y}`).join(' ')} L${points[points.length - 1].x},${PAD.t + ch} Z`;
+  const latest = points[points.length - 1];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
+      <defs><linearGradient id="bwGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a14000" stopOpacity="0.1" /><stop offset="100%" stopColor="#a14000" stopOpacity="0" /></linearGradient></defs>
+      {[0, 0.5, 1].map(f => <line key={f} x1={PAD.l} y1={PAD.t + ch * (1 - f)} x2={PAD.l + cw} y2={PAD.t + ch * (1 - f)} stroke="#e0c0b2" strokeOpacity="0.2" strokeWidth="1" />)}
+      <path d={area} fill="url(#bwGrad)" />
+      <polyline points={polyline} fill="none" stroke="#a14000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={latest.x} cy={latest.y} r="5" fill="#f26d21" />
+      <rect x={latest.x - 24} y={latest.y - 28} width="48" height="20" rx="10" fill="#a14000" />
+      <text x={latest.x} y={latest.y - 15} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Lexend">{latest.weightKg}kg</text>
+      {points.filter((_, i) => i % Math.max(1, Math.floor(points.length / 6)) === 0 || i === points.length - 1).map((p, i) => (
+        <text key={i} x={p.x} y={H - 5} textAnchor="middle" fill="#8c7166" fontSize="8" fontFamily="Manrope">{p.date.slice(5)}</text>
+      ))}
+    </svg>
   );
 }

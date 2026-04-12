@@ -24,6 +24,16 @@ model User {
   comments      Comment[]
   followers     Follow[] @relation("UserFollowing")
   following     Follow[] @relation("UserFollowers")
+  bodyWeights   BodyWeight[]
+}
+
+model BodyWeight {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  weightKg Float
+  date     DateTime
+  notes    String?
+  user     User     @relation(fields: [userId], references: [id])
 }
 
 model Week {
