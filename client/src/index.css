@@ -3,12 +3,27 @@
 @theme {
   --color-primary: #a14000;
   --color-primary-container: #f26d21;
+  --color-primary-fixed: #ffdbcc;
+  --color-primary-fixed-dim: #ffb694;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #521d00;
   --color-secondary: #735c00;
   --color-secondary-container: #fdd34d;
+  --color-secondary-fixed: #ffe087;
+  --color-secondary-fixed-dim: #ebc23e;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #725b00;
   --color-tertiary: #8f4e00;
   --color-tertiary-container: #de7c00;
+  --color-tertiary-fixed: #ffdcc2;
+  --color-tertiary-fixed-dim: #ffb77a;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #482400;
   --color-surface: #fcf9f8;
   --color-surface-bright: #fcf9f8;
+  --color-surface-dim: #dcd9d9;
+  --color-surface-variant: #e4e2e1;
+  --color-surface-tint: #a14000;
   --color-surface-container-lowest: #ffffff;
   --color-surface-container-low: #f6f3f2;
   --color-surface-container: #f0eded;
@@ -16,30 +31,47 @@
   --color-surface-container-highest: #e4e2e1;
   --color-on-surface: #1b1c1c;
   --color-on-surface-variant: #584238;
-  --color-on-primary: #ffffff;
+  --color-on-background: #1b1c1c;
+  --color-background: #fcf9f8;
   --color-outline: #8c7166;
   --color-outline-variant: #e0c0b2;
+  --color-inverse-surface: #303030;
+  --color-inverse-on-surface: #f3f0ef;
+  --color-inverse-primary: #ffb694;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
 
-  --font-heading: 'Lexend', sans-serif;
+  --font-headline: 'Lexend', sans-serif;
   --font-body: 'Manrope', sans-serif;
+  --font-label: 'Manrope', sans-serif;
 
   --radius-sm: 0.25rem;
+  --radius-DEFAULT: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
   --radius-full: 9999px;
 }
 
 body {
-  font-family: var(--font-body);
-  color: var(--color-on-surface);
-  background-color: var(--color-surface);
+  font-family: 'Manrope', sans-serif;
+  color: #1b1c1c;
+  background-color: #fcf9f8;
 }
 
-.font-heading {
-  font-family: var(--font-heading);
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-.gradient-primary {
+.material-symbols-outlined.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.hearth-glow {
   background: linear-gradient(135deg, #a14000 0%, #f26d21 100%);
 }
 
@@ -59,3 +91,9 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e0c0b2; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #8c7166; }
