@@ -16,6 +16,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             include: { sets: true },
             orderBy: { order: 'asc' },
           },
+          cardioSession: true,
         },
       },
     },
@@ -48,7 +49,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     },
     include: {
       days: {
-        include: { exercises: { include: { sets: true } } },
+        include: { exercises: { include: { sets: true } }, cardioSession: true },
       },
     },
   });
@@ -265,6 +266,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
             include: { sets: true },
             orderBy: { order: 'asc' },
           },
+          cardioSession: true,
         },
       },
     },

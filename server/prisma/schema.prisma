@@ -34,12 +34,29 @@ model Week {
 }
 
 model Day {
-  id        Int       @id @default(autoincrement())
-  weekId    Int
-  dayOfWeek String
-  focus     String
-  week      Week      @relation(fields: [weekId], references: [id])
-  exercises Exercise[]
+  id            Int            @id @default(autoincrement())
+  weekId        Int
+  dayOfWeek     String
+  focus         String
+  activityType  String         @default("WORKOUT")
+  week          Week           @relation(fields: [weekId], references: [id])
+  exercises     Exercise[]
+  cardioSession CardioSession?
+}
+
+model CardioSession {
+  id              Int      @id @default(autoincrement())
+  dayId           Int      @unique
+  type            String
+  distanceKm      Float?
+  durationMinutes Int?
+  avgHeartRate    Int?
+  elevationM      Int?
+  avgPaceMinKm    Float?
+  avgSpeedKmh     Float?
+  calories        Int?
+  notes           String?
+  day             Day      @relation(fields: [dayId], references: [id])
 }
 
 model Exercise {

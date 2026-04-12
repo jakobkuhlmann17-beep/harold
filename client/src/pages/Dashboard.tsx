@@ -8,7 +8,7 @@ const WEEK_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [todayWorkout, setTodayWorkout] = useState<{ focus: string; completed: number; total: number } | null>(null);
+  const [todayWorkout, setTodayWorkout] = useState<{ focus: string; completed: number; total: number; activityType: string; cardio: any | null } | null>(null);
   const [nutrition, setNutrition] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [streak, setStreak] = useState(0);
   const [weeklyVolume, setWeeklyVolume] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
@@ -25,6 +25,8 @@ export default function Dashboard() {
           focus: day.focus || 'Rest',
           completed: allSets.filter((s: any) => s.completed).length,
           total: allSets.length,
+          activityType: day.activityType || 'WORKOUT',
+          cardio: day.cardioSession || null,
         });
       }
 
@@ -146,11 +148,21 @@ export default function Dashboard() {
           {todayWorkout ? (
             <div className="bg-surface-container-lowest p-6 rounded-3xl flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl hearth-glow flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-primary text-[24px]">fitness_center</span>
+                <span className="material-symbols-outlined text-on-primary text-[24px]">
+                  {todayWorkout.activityType === 'RUN' ? 'directions_run' : todayWorkout.activityType === 'CYCLING' ? 'directions_bike' : 'fitness_center'}
+                </span>
               </div>
               <div className="flex-1">
                 <p className="font-headline font-bold text-lg text-on-surface capitalize">{todayWorkout.focus}</p>
-                <p className="text-sm text-on-surface-variant font-body">{todayWorkout.completed} / {todayWorkout.total} sets completed</p>
+                {todayWorkout.activityType === 'WORKOUT' ? (
+                  <p className="text-sm text-on-surface-variant font-body">{todayWorkout.completed} / {todayWorkout.total} sets completed</p>
+                ) : todayWorkout.cardio ? (
+                  <p className="text-sm text-on-surface-variant font-body">
+                    {todayWorkout.cardio.distanceKm ? `${todayWorkout.cardio.distanceKm} km` : ''}{todayWorkout.cardio.durationMinutes ? ` \u00b7 ${todayWorkout.cardio.durationMinutes} min` : ''}
+                  </p>
+                ) : (
+                  <p className="text-sm text-on-surface-variant font-body">{todayWorkout.activityType === 'RUN' ? 'Run' : 'Cycling'} \u2014 not logged yet</p>
+                )}
               </div>
               <Link to="/workout" className="text-on-surface-variant hover:text-primary transition-colors">
                 <span className="material-symbols-outlined">chevron_right</span>
