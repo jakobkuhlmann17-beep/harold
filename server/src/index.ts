@@ -13,6 +13,7 @@ import setRoutes from './routes/sets';
 import mealRoutes from './routes/meals';
 import userRoutes from './routes/user';
 import trendsRoutes from './routes/trends';
+import communityRoutes from './routes/community';
 import { authMiddleware } from './middleware/auth';
 
 export const prisma = new PrismaClient();
@@ -38,6 +39,7 @@ app.use('/api/sets', authMiddleware, setRoutes);
 app.use('/api/meals', authMiddleware, mealRoutes);
 app.use('/api/user', authMiddleware, userRoutes);
 app.use('/api/trends', authMiddleware, trendsRoutes);
+app.use('/api/community', authMiddleware, communityRoutes);
 
 // Error handler
 const isProduction = process.env.NODE_ENV === 'production';

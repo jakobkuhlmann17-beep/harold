@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: '/workout', label: 'Workout', icon: 'fitness_center' },
   { to: '/trends', label: 'Trends', icon: 'insights' },
   { to: '/nutrition', label: 'Nutrition', icon: 'restaurant' },
+  { to: '/community', label: 'Community', icon: 'group' },
 ];
 
 const PAGE_TITLES: Record<string, string> = {
@@ -13,6 +14,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/workout': 'Workout Log',
   '/trends': 'Trends',
   '/nutrition': 'Nutrition',
+  '/community': 'Community',
 };
 
 export default function Layout() {
