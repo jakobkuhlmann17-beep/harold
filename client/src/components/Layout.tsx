@@ -15,6 +15,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/trends': 'Trends',
   '/nutrition': 'Nutrition',
   '/community': 'Community',
+  '/admin': 'Admin',
 };
 
 export default function Layout() {
@@ -51,6 +52,18 @@ export default function Layout() {
               <span className="font-headline text-sm">{item.label}</span>
             </NavLink>
           ))}
+          {/* Admin button — only for kuhli1712 */}
+          {user?.username === 'kuhli1712' && (
+            <NavLink to="/admin"
+              className={({ isActive }) =>
+                `flex items-center gap-3 mx-0 mt-4 px-4 py-3 rounded-xl font-headline font-bold text-sm transition-colors ${
+                  isActive ? 'bg-blue-700 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`
+              }>
+              <span className="material-symbols-outlined text-[22px]">admin_panel_settings</span>
+              Admin
+            </NavLink>
+          )}
         </nav>
 
         {/* Bottom section */}
