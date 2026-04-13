@@ -4,6 +4,8 @@ import api from '../lib/api';
 import ExerciseAutocomplete from '../components/ExerciseAutocomplete';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Toast from '../components/Toast';
+import SwipeableSetRow from '../components/SwipeableSetRow';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const COMPOUND_KEYWORDS = ['barbell', 'squat', 'deadlift', 'row', 'pull-down', 'pulldown', 'bench', 'press', 'overhead'];
 const BODYWEIGHT_KEYWORDS = ['dip', 'pull-up', 'pullup', 'sit-up', 'situp', 'push-up', 'pushup', 'crunch', 'hanging'];
@@ -70,6 +72,7 @@ export default function Workout() {
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; confirmStyle: 'error' | 'primary'; onConfirm: () => Promise<void> } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const showToast = useCallback((msg: string) => setToast(msg), []);
+  const isMobile = useIsMobile();
 
   // Session state
   const [sessionActive, setSessionActive] = useState(false);
@@ -519,7 +522,7 @@ export default function Workout() {
                 currentDay={currentDay} newExName={newExName} setNewExName={setNewExName}
                 addExercise={addExercise} deleteExercise={deleteExercise} addSet={addSet}
                 updateSet={updateSet} deleteSet={deleteSet} updateExerciseName={updateExerciseName}
-                exerciseHistory={exerciseHistory}
+                exerciseHistory={exerciseHistory} sessionActive={sessionActive} isMobile={isMobile}
               />}
               {activityType === 'RUN' && currentDay && <CardioContent dayId={currentDay.id} type="RUN" onSaved={fetchWeeks} existing={currentDay.cardioSession} />}
               {activityType === 'CYCLING' && currentDay && <CardioContent dayId={currentDay.id} type="CYCLING" onSaved={fetchWeeks} existing={currentDay.cardioSession} />}
@@ -694,14 +697,33 @@ export default function Workout() {
 }
 
 // --- Workout exercises content ---
-function WorkoutContent({ currentDay, newExName, setNewExName, addExercise, deleteExercise, addSet, updateSet, deleteSet, updateExerciseName, exerciseHistory }: {
+function WorkoutContent({ currentDay, newExName, setNewExName, addExercise, deleteExercise, addSet, updateSet, deleteSet, updateExerciseName, exerciseHistory, sessionActive, isMobile }: {
   currentDay: any; newExName: string; setNewExName: (v: string) => void;
   addExercise: (nameOverride?: string) => void; deleteExercise: (id: number) => void; addSet: (ex: any) => void;
   updateSet: (id: number, f: string, v: any) => void; deleteSet: (id: number) => void; updateExerciseName: (id: number, n: string) => void;
-  exerciseHistory: { name: string; count: number }[];
+  exerciseHistory: { name: string; count: number }[]; sessionActive: boolean; isMobile: boolean;
 }) {
+  const [hintShown, setHintShown] = useState(false);
+
+  const handleRowClick = (e: React.MouseEvent, setId: number, completed: boolean) => {
+    if (!sessionActive || isMobile || completed) return;
+    // Don't trigger on interactive elements
+    const target = e.target as HTMLElement;
+    if (target.closest('input') || target.closest('textarea') || target.closest('button') || target.closest('[data-no-tap]')) return;
+    updateSet(setId, 'completed', true);
+    setHintShown(true);
+  };
+
   return (
     <>
+      {/* Mobile swipe hint */}
+      {sessionActive && isMobile && !hintShown && currentDay.exercises.some((ex: any) => ex.sets.some((s: any) => !s.completed)) && (
+        <div className="text-center text-xs text-on-surface-variant/50 font-body py-1">&larr; Swipe right to complete &rarr;</div>
+      )}
+      {/* Desktop tap hint */}
+      {sessionActive && !isMobile && !hintShown && currentDay.exercises.some((ex: any) => ex.sets.some((s: any) => !s.completed)) && (
+        <div className="text-center text-xs text-on-surface-variant/50 font-body py-1">Tap any incomplete set row to mark it done</div>
+      )}
       {currentDay.exercises.length === 0 && (
         <div className="bg-surface-container-lowest rounded-xl p-8 text-center"><p className="text-on-surface-variant font-body">No exercises yet. Add one below.</p></div>
       )}
@@ -714,21 +736,45 @@ function WorkoutContent({ currentDay, newExName, setNewExName, addExercise, dele
             </button>
           </div>
           <div className="px-4 pb-2">
-            {ex.sets.map((s: any, si: number) => (
-              <div key={s.id} className="grid grid-cols-12 gap-2 items-center py-2 border-t border-outline-variant/10">
-                <div className="col-span-1 text-center"><span className="text-xs font-label text-outline">{si + 1}</span></div>
-                <div className="col-span-3"><div className="bg-surface-container-low rounded-lg p-2"><span className="text-[9px] font-label uppercase tracking-widest text-on-surface-variant">KG</span><EditableNumber value={s.weightKg} onSave={(v) => updateSet(s.id, 'weightKg', v)} decimal /></div></div>
-                <div className="col-span-3"><div className="bg-surface-container-low rounded-lg p-2"><span className="text-[9px] font-label uppercase tracking-widest text-on-surface-variant">REPS</span><EditableNumber value={s.reps} onSave={(v) => updateSet(s.id, 'reps', v)} /></div></div>
-                <div className="col-span-3">{s.notes && <span className="text-[10px] text-outline font-body italic truncate block">{s.notes}</span>}<FeedbackInput value={s.feedback} onSave={(v) => updateSet(s.id, 'feedback', v)} /></div>
-                <div className="col-span-2 flex items-center justify-end gap-1">
-                  <button onClick={(e) => { e.stopPropagation(); updateSet(s.id, 'completed', !s.completed); }}
-                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${s.completed ? 'bg-secondary-container border-secondary-container text-on-secondary-container' : 'border-outline-variant text-transparent hover:border-secondary'}`}>
-                    <span className="material-symbols-outlined text-[18px]">check</span>
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); deleteSet(s.id); }} className="text-outline-variant hover:text-error transition-colors"><span className="material-symbols-outlined text-[16px]">close</span></button>
+            {ex.sets.map((s: any, si: number) => {
+              const setRow = (
+                <div
+                  key={s.id}
+                  onClick={(e) => handleRowClick(e, s.id, s.completed)}
+                  className={`grid grid-cols-12 gap-2 items-center py-2 border-t border-outline-variant/10 transition-colors duration-150 ${
+                    sessionActive && !isMobile && !s.completed ? 'cursor-pointer hover:bg-primary-fixed/20' : ''
+                  } ${s.completed && sessionActive ? 'bg-green-50/50' : ''}`}
+                >
+                  <div className="col-span-1 text-center">
+                    {s.completed && sessionActive ? (
+                      <span className="material-symbols-outlined text-[16px] text-[#2e7d32]">check</span>
+                    ) : (
+                      <span className="text-xs font-label text-outline">{si + 1}</span>
+                    )}
+                  </div>
+                  <div className="col-span-3"><div className={`bg-surface-container-low rounded-lg p-2 ${isMobile ? 'min-h-[44px]' : ''}`}><span className="text-[9px] font-label uppercase tracking-widest text-on-surface-variant">KG</span><EditableNumber value={s.weightKg} onSave={(v) => updateSet(s.id, 'weightKg', v)} decimal inputMode={isMobile ? 'decimal' : undefined} /></div></div>
+                  <div className="col-span-3"><div className={`bg-surface-container-low rounded-lg p-2 ${isMobile ? 'min-h-[44px]' : ''}`}><span className="text-[9px] font-label uppercase tracking-widest text-on-surface-variant">REPS</span><EditableNumber value={s.reps} onSave={(v) => updateSet(s.id, 'reps', v)} inputMode={isMobile ? 'numeric' : undefined} /></div></div>
+                  <div className="col-span-3">{s.notes && <span className="text-[10px] text-outline font-body italic truncate block">{s.notes}</span>}<FeedbackInput value={s.feedback} onSave={(v) => updateSet(s.id, 'feedback', v)} /></div>
+                  <div className="col-span-2 flex items-center justify-end gap-1" data-no-tap>
+                    <button onClick={(e) => { e.stopPropagation(); updateSet(s.id, 'completed', !s.completed); }}
+                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${s.completed ? 'bg-secondary-container border-secondary-container text-on-secondary-container' : 'border-outline-variant text-transparent hover:border-secondary'}`}>
+                      <span className="material-symbols-outlined text-[18px]">check</span>
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); deleteSet(s.id); }} className="text-outline-variant hover:text-error transition-colors"><span className="material-symbols-outlined text-[16px]">close</span></button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+
+              // Wrap in swipeable on mobile during active session
+              if (isMobile && sessionActive) {
+                return (
+                  <SwipeableSetRow key={s.id} onComplete={() => { updateSet(s.id, 'completed', true); setHintShown(true); }} onDelete={() => deleteSet(s.id)} isCompleted={s.completed} enabled={!s.completed}>
+                    {setRow}
+                  </SwipeableSetRow>
+                );
+              }
+              return setRow;
+            })}
           </div>
           <div className="px-4 pb-3">
             <button onClick={() => addSet(ex)} className="text-primary font-bold text-sm font-headline flex items-center gap-1 hover:translate-x-1 transition-transform">
@@ -892,13 +938,14 @@ function EditableText({ value, onSave, className }: { value: string; onSave: (v:
   return <span onClick={(e) => { e.stopPropagation(); setEditing(true); }} className={`cursor-pointer hover:text-primary transition-colors ${className}`}>{value}</span>;
 }
 
-function EditableNumber({ value, onSave, decimal }: { value: number | null; onSave: (v: number | null) => void; decimal?: boolean }) {
+function EditableNumber({ value, onSave, decimal, inputMode }: { value: number | null; onSave: (v: number | null) => void; decimal?: boolean; inputMode?: string }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value?.toString() ?? '');
   // Sync text with prop when not editing
   useEffect(() => { if (!editing) setText(value?.toString() ?? ''); }, [value, editing]);
   if (editing) {
     return <input value={text} onChange={(e) => setText(e.target.value)} type="number" step={decimal ? '0.5' : '1'}
+      inputMode={inputMode as any}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onBlur={() => { onSave(text === '' ? null : decimal ? parseFloat(text) : parseInt(text)); setEditing(false); }}
