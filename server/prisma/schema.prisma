@@ -107,17 +107,19 @@ model Meal {
 }
 
 model Post {
-  id              Int       @id @default(autoincrement())
-  userId          Int
-  content         String
-  category        String?
-  workoutPostId   Int?
-  sharedDayOfWeek String?
-  createdAt       DateTime  @default(now())
-  user            User      @relation(fields: [userId], references: [id])
-  workoutPost     Week?     @relation(fields: [workoutPostId], references: [id])
-  likes           Like[]
-  comments        Comment[]
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  content          String
+  category         String?
+  workoutPostId    Int?
+  sharedDayOfWeek  String?
+  cardioSessionId  Int?
+  activityType     String?
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id])
+  workoutPost      Week?     @relation(fields: [workoutPostId], references: [id])
+  likes            Like[]
+  comments         Comment[]
 }
 
 model Follow {

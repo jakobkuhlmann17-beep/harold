@@ -4,7 +4,7 @@ import api from '../lib/api';
 import { timeAgo } from '../utils/timeAgo';
 
 interface PostUser { id: number; username: string; }
-interface PostData { id: number; content: string; category: string | null; createdAt: string; user: PostUser; likeCount: number; commentCount: number; likedByMe: boolean; hasWorkout?: boolean; workoutPostId?: number | null; sharedDayOfWeek?: string | null; }
+interface PostData { id: number; content: string; category: string | null; createdAt: string; user: PostUser; likeCount: number; commentCount: number; likedByMe: boolean; hasWorkout?: boolean; workoutPostId?: number | null; sharedDayOfWeek?: string | null; hasCardio?: boolean; cardioSessionId?: number | null; activityType?: string | null; }
 interface CommentData { id: number; content: string; createdAt: string; user: PostUser; }
 interface LeaderRow { rank: number; username: string; totalSets: number; isCurrentUser: boolean; }
 interface SearchUser { id: number; username: string; followerCount: number; followingCount: number; isFollowedByMe: boolean; }
@@ -33,6 +33,7 @@ export default function Community() {
 
   // Workout detail modal
   const [workoutModal, setWorkoutModal] = useState<any>(null);
+  const [cardioModal, setCardioModal] = useState<any>(null);
 
   const fetchPosts = async (filter: string = 'foryou') => {
     const { data } = await api.get(`/community/posts${filter === 'following' ? '?filter=following' : ''}`);
@@ -92,6 +93,11 @@ export default function Community() {
   const viewWorkout = async (postId: number) => {
     const { data } = await api.get(`/community/posts/${postId}/workout`);
     setWorkoutModal(data);
+  };
+
+  const viewCardio = async (postId: number) => {
+    const { data } = await api.get(`/community/posts/${postId}/cardio`);
+    setCardioModal(data);
   };
 
   if (loading) return <LoadingSkeleton />;
@@ -168,7 +174,8 @@ export default function Community() {
           {posts.map((p) => (
             <PostCard key={p.id} post={p} currentUserId={user?.id || 0}
               onLike={() => toggleLike(p.id)} onDelete={() => deletePost(p.id)}
-              onViewWorkout={p.hasWorkout ? () => viewWorkout(p.id) : undefined} />
+              onViewWorkout={p.hasWorkout ? () => viewWorkout(p.id) : undefined}
+              onViewCardio={p.hasCardio ? () => viewCardio(p.id) : undefined} />
           ))}
         </div>
 
@@ -241,13 +248,14 @@ export default function Community() {
 
       {/* Workout detail modal */}
       {workoutModal && <WorkoutModal data={workoutModal} onClose={() => setWorkoutModal(null)} />}
+      {cardioModal && <CardioModal data={cardioModal} onClose={() => setCardioModal(null)} />}
     </div>
   );
 }
 
 // --- Post Card ---
-function PostCard({ post, currentUserId, onLike, onDelete, onViewWorkout }: {
-  post: PostData; currentUserId: number; onLike: () => void; onDelete: () => void; onViewWorkout?: () => void;
+function PostCard({ post, currentUserId, onLike, onDelete, onViewWorkout, onViewCardio }: {
+  post: PostData; currentUserId: number; onLike: () => void; onDelete: () => void; onViewWorkout?: () => void; onViewCardio?: () => void;
 }) {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<CommentData[]>([]);
@@ -277,20 +285,33 @@ function PostCard({ post, currentUserId, onLike, onDelete, onViewWorkout }: {
       <p className="font-body text-on-surface text-sm leading-relaxed mb-3">{post.content}</p>
 
       {/* Workout preview card */}
-      {post.hasWorkout && onViewWorkout && (
+      {/* Workout preview card */}
+      {post.hasWorkout && !post.hasCardio && onViewWorkout && (
         <div className="bg-primary-fixed/30 rounded-xl p-4 border border-primary-fixed mb-3">
           <div className="flex items-center justify-between mb-2">
             <p className="font-headline font-bold text-sm text-on-surface flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[18px]">fitness_center</span>
-              {post.sharedDayOfWeek
-                ? `${post.sharedDayOfWeek.charAt(0) + post.sharedDayOfWeek.slice(1).toLowerCase()} Workout`
-                : 'Full Week Workout'}
+              {post.sharedDayOfWeek ? `${post.sharedDayOfWeek.charAt(0) + post.sharedDayOfWeek.slice(1).toLowerCase()} Workout` : 'Full Week Workout'}
             </p>
             <button onClick={onViewWorkout} className="text-primary font-bold text-xs font-headline flex items-center gap-1 hover:gap-2 transition-all">
               View {post.sharedDayOfWeek ? 'Day' : 'Week'} <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
             </button>
           </div>
           <p className="text-xs text-on-surface-variant font-body">Tap to view exercises, sets and weights.</p>
+        </div>
+      )}
+
+      {/* Cardio preview card */}
+      {post.hasCardio && onViewCardio && (
+        <div className={`rounded-xl p-4 mb-3 ${post.activityType === 'RUN' ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+          <div className="flex items-center justify-between">
+            <p className="font-headline font-bold text-sm text-on-surface">
+              {post.activityType === 'RUN' ? '\ud83c\udfc3' : '\ud83d\udeb4'} {post.sharedDayOfWeek ? `${post.sharedDayOfWeek.charAt(0) + post.sharedDayOfWeek.slice(1).toLowerCase()} ${post.activityType === 'RUN' ? 'Run' : 'Ride'}` : post.activityType === 'RUN' ? 'Run' : 'Ride'}
+            </p>
+            <button onClick={onViewCardio} className="text-primary font-bold text-xs font-headline flex items-center gap-1 hover:gap-2 transition-all">
+              View Details <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -395,6 +416,63 @@ function WorkoutModal({ data, onClose }: { data: any; onClose: () => void }) {
 }
 
 // --- Loading Skeleton ---
+function CardioModal({ data, onClose }: { data: any; onClose: () => void }) {
+  if (!data) return null;
+  const isRun = data.type === 'RUN';
+  const paceStr = data.avgPaceMinKm ? `${Math.floor(data.avgPaceMinKm)}:${String(Math.round((data.avgPaceMinKm % 1) * 60)).padStart(2, '0')}` : null;
+  const dayName = data.dayOfWeek ? data.dayOfWeek.charAt(0) + data.dayOfWeek.slice(1).toLowerCase() : '';
+
+  const stats = [
+    data.durationMinutes && { value: `${data.durationMinutes}`, label: 'Duration', unit: 'min' },
+    isRun && paceStr && { value: paceStr, label: 'Pace', unit: '/km' },
+    !isRun && data.avgSpeedKmh && { value: `${data.avgSpeedKmh}`, label: 'Speed', unit: 'km/h' },
+    data.avgHeartRate && { value: `${data.avgHeartRate}`, label: 'HR', unit: 'bpm' },
+    data.elevationM && { value: `+${data.elevationM}`, label: 'Elevation', unit: 'm' },
+    data.calories && { value: `${data.calories}`, label: 'Calories', unit: 'kcal' },
+  ].filter(Boolean);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-surface-container-lowest rounded-3xl max-w-lg w-full mx-4 p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <p className="font-headline font-bold text-lg text-on-surface">{isRun ? '\ud83c\udfc3' : '\ud83d\udeb4'} {dayName} {isRun ? 'Run' : 'Ride'}</p>
+            {data.weekNumber && <p className="text-xs text-on-surface-variant font-label">Week {data.weekNumber}</p>}
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center hover:bg-surface-container-highest transition-colors">
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+
+        {/* Main distance */}
+        {data.distanceKm && (
+          <div className="text-center mb-6">
+            <p className="font-headline font-black text-5xl text-primary">{data.distanceKm}</p>
+            <p className="text-xs uppercase text-on-surface-variant font-bold tracking-widest mt-1">km total distance</p>
+          </div>
+        )}
+
+        {/* Stat boxes */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          {stats.map((s: any) => (
+            <div key={s.label} className="bg-surface-container-low rounded-2xl p-4 text-center">
+              <p className="font-headline font-black text-2xl text-primary">{s.value}<span className="text-sm text-on-surface-variant font-normal ml-0.5">{s.unit}</span></p>
+              <p className="text-xs uppercase text-on-surface-variant font-bold tracking-widest mt-1">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {data.notes && (
+          <div className="bg-surface-container-low rounded-xl p-4">
+            <p className="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-1">Notes</p>
+            <p className="text-sm text-on-surface font-body italic">{data.notes}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LoadingSkeleton() {
   return (
     <div className="space-y-6">

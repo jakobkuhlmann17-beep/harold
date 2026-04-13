@@ -256,13 +256,22 @@ export default function Workout() {
   const isLatestWeek = weekIdx === weeks.length - 1;
   const activityType = currentDay?.activityType || 'WORKOUT';
   const hasCompletedSets = currentWeek?.days?.some((d: any) => d.exercises?.some((e: any) => e.sets?.some((s: any) => s.completed))) || false;
+  const hasCardioData = currentDay && (currentDay.activityType === 'RUN' || currentDay.activityType === 'CYCLING') && currentDay.cardioSession && (currentDay.cardioSession.distanceKm || currentDay.cardioSession.durationMinutes);
+  const canShare = hasCompletedSets || hasCardioData;
 
   const shareWorkout = async () => {
     if (!currentWeek) return;
     setSharing(true);
     try {
-      const payload: any = { weekId: currentWeek.id, content: shareContent || `Just completed Week ${currentWeek.weekNumber}!`, category: shareCategory };
+      const selectedDayData = shareMode === 'day' && shareDay ? (currentWeek.days || []).find((d: any) => d.dayOfWeek === shareDay) : null;
+      const isCardio = selectedDayData && (selectedDayData.activityType === 'RUN' || selectedDayData.activityType === 'CYCLING');
+      const defaultContent = isCardio ? `Just finished a ${selectedDayData.activityType === 'RUN' ? 'run' : 'ride'}!` : `Just completed Week ${currentWeek.weekNumber}!`;
+      const payload: any = { weekId: currentWeek.id, content: shareContent || defaultContent, category: shareCategory };
       if (shareMode === 'day' && shareDay) payload.dayOfWeek = shareDay;
+      if (isCardio && selectedDayData.cardioSession) {
+        payload.cardioSessionId = selectedDayData.cardioSession.id;
+        payload.activityType = selectedDayData.activityType;
+      }
       await api.post('/community/posts/share-workout', payload);
       setShareOpen(false); setShareContent(''); setShareCategory(null); setShareMode('day'); setShareDay(null);
       showToast('Workout shared to your community wall!');
@@ -318,7 +327,7 @@ export default function Workout() {
               )}
             </button>
           )}
-          {currentWeek && hasCompletedSets && (
+          {currentWeek && canShare && (
             <button onClick={() => { setShareOpen(true); setShareDay(currentDay?.dayOfWeek || null); setShareMode('day'); }} className="bg-surface-container-low rounded-full px-4 py-2 text-xs font-headline flex items-center gap-2 hover:bg-surface-container-high transition-colors text-on-surface-variant">
               <span className="material-symbols-outlined text-[14px]">share</span> Share as Pulse
             </button>
@@ -346,15 +355,22 @@ export default function Workout() {
 
       {/* Share as Pulse modal */}
       {shareOpen && currentWeek && (() => {
-        const daysWithSets = (currentWeek.days || []).filter((d: any) => d.exercises?.some((e: any) => e.sets?.some((s: any) => s.completed)));
+        const daysShareable = (currentWeek.days || []).filter((d: any) =>
+          d.exercises?.some((e: any) => e.sets?.some((s: any) => s.completed)) ||
+          ((d.activityType === 'RUN' || d.activityType === 'CYCLING') && d.cardioSession && (d.cardioSession.distanceKm || d.cardioSession.durationMinutes))
+        );
         const selectedDayData = shareMode === 'day' && shareDay ? (currentWeek.days || []).find((d: any) => d.dayOfWeek === shareDay) : null;
+        const isCardioDay = selectedDayData && (selectedDayData.activityType === 'RUN' || selectedDayData.activityType === 'CYCLING') && selectedDayData.cardioSession;
+        const cardio = isCardioDay ? selectedDayData.cardioSession : null;
 
-        // Preview data
+        // Preview data for workout days
         const previewDays = shareMode === 'day' && selectedDayData ? [selectedDayData] : currentWeek.days || [];
         const completedSets = previewDays.reduce((s: number, d: any) => s + (d.exercises?.flatMap((e: any) => e.sets).filter((st: any) => st.completed).length || 0), 0);
         const totalExercises = previewDays.reduce((s: number, d: any) => s + (d.exercises?.length || 0), 0);
         const exerciseNames = [...new Set(previewDays.flatMap((d: any) => d.exercises?.map((e: any) => e.name) || []))].slice(0, 5);
         const dayLabel = selectedDayData ? `${selectedDayData.dayOfWeek.charAt(0) + selectedDayData.dayOfWeek.slice(1).toLowerCase()}${selectedDayData.focus ? ' \u2014 ' + selectedDayData.focus.charAt(0).toUpperCase() + selectedDayData.focus.slice(1) : ''}` : '';
+        const cardioIcon = selectedDayData?.activityType === 'RUN' ? '\ud83c\udfc3' : '\ud83d\udeb4';
+        const paceStr = cardio?.avgPaceMinKm ? `${Math.floor(cardio.avgPaceMinKm)}:${String(Math.round((cardio.avgPaceMinKm % 1) * 60)).padStart(2, '0')} /km` : null;
 
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => setShareOpen(false)}>
@@ -370,7 +386,7 @@ export default function Workout() {
               {/* Day selector (when single day mode) */}
               {shareMode === 'day' && (
                 <div className="flex flex-wrap gap-2">
-                  {daysWithSets.map((d: any) => (
+                  {daysShareable.map((d: any) => (
                     <button key={d.dayOfWeek} onClick={() => setShareDay(d.dayOfWeek)}
                       className={`rounded-full px-4 py-1.5 text-xs font-headline font-bold transition-all ${shareDay === d.dayOfWeek ? 'hearth-glow text-white' : 'bg-surface-container rounded-full border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container-high'}`}>
                       {DAY_SHORT[d.dayOfWeek]} &check;
@@ -380,20 +396,36 @@ export default function Workout() {
               )}
 
               {/* Preview card */}
-              <div className="bg-primary-fixed/30 rounded-2xl p-4 border border-primary-fixed">
-                <p className="font-headline font-bold text-sm text-on-surface flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">fitness_center</span>
-                  {shareMode === 'day' ? dayLabel : `Week ${currentWeek.weekNumber} \u2014 Full Week`}
-                </p>
-                <p className="text-sm text-on-surface-variant font-body mt-1">
-                  {shareMode === 'week' && `${daysWithSets.length} days \u00b7 `}{completedSets} sets completed &middot; {totalExercises} exercises
-                </p>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {exerciseNames.map((n: string) => (
-                    <span key={n} className="bg-surface-container-lowest rounded-full px-2 py-0.5 text-[10px] font-label text-on-surface-variant">{n}</span>
-                  ))}
+              {isCardioDay && cardio ? (
+                <div className={`rounded-2xl p-4 border ${selectedDayData.activityType === 'RUN' ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
+                  <p className="font-headline font-bold text-sm text-on-surface flex items-center gap-2">
+                    {cardioIcon} {dayLabel}
+                  </p>
+                  <div className="flex flex-wrap gap-3 mt-2 text-sm">
+                    {cardio.distanceKm && <span className="font-headline font-black text-primary">{cardio.distanceKm} km</span>}
+                    {cardio.durationMinutes && <span className="text-on-surface-variant">&bull; {cardio.durationMinutes} min</span>}
+                    {selectedDayData.activityType === 'RUN' && paceStr && <span className="text-on-surface-variant">&bull; {paceStr}</span>}
+                    {selectedDayData.activityType === 'CYCLING' && cardio.avgSpeedKmh && <span className="text-on-surface-variant">&bull; {cardio.avgSpeedKmh} km/h</span>}
+                    {cardio.avgHeartRate && <span className="text-on-surface-variant">&bull; {cardio.avgHeartRate} bpm</span>}
+                  </div>
+                  {cardio.elevationM && <p className="text-xs text-on-surface-variant mt-1">+{cardio.elevationM}m elevation</p>}
                 </div>
-              </div>
+              ) : (
+                <div className="bg-primary-fixed/30 rounded-2xl p-4 border border-primary-fixed">
+                  <p className="font-headline font-bold text-sm text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">fitness_center</span>
+                    {shareMode === 'day' ? dayLabel : `Week ${currentWeek.weekNumber} \u2014 Full Week`}
+                  </p>
+                  <p className="text-sm text-on-surface-variant font-body mt-1">
+                    {shareMode === 'week' && `${daysShareable.length} days \u00b7 `}{completedSets} sets completed &middot; {totalExercises} exercises
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {exerciseNames.map((n: string) => (
+                      <span key={n} className="bg-surface-container-lowest rounded-full px-2 py-0.5 text-[10px] font-label text-on-surface-variant">{n}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <textarea value={shareContent} onChange={(e) => setShareContent(e.target.value)} placeholder="Add a caption..."
                 className="w-full bg-surface-container-low rounded-xl p-4 text-sm font-body text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none h-24" />

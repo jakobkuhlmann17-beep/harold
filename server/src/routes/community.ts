@@ -38,7 +38,10 @@ router.get('/posts', async (req: AuthRequest, res: Response) => {
       category: p.category,
       workoutPostId: p.workoutPostId,
       sharedDayOfWeek: p.sharedDayOfWeek,
+      cardioSessionId: p.cardioSessionId,
+      activityType: p.activityType,
       hasWorkout: !!p.workoutPostId,
+      hasCardio: !!p.cardioSessionId,
       createdAt: p.createdAt.toISOString(),
       user: p.user,
       likeCount: p.likes.length,
@@ -70,10 +73,10 @@ router.post('/posts', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/community/posts/share-workout — share a week or single day as a post
+// POST /api/community/posts/share-workout — share a workout, run or cycling session
 router.post('/posts/share-workout', async (req: AuthRequest, res: Response) => {
   try {
-    const { weekId, dayOfWeek, content, category } = req.body;
+    const { weekId, dayOfWeek, content, category, cardioSessionId, activityType } = req.body;
     if (!weekId) return res.status(400).json({ error: 'weekId is required' });
 
     const week = await prisma.week.findFirst({ where: { id: weekId, userId: req.userId } });
@@ -86,11 +89,13 @@ router.post('/posts/share-workout', async (req: AuthRequest, res: Response) => {
         category: category || 'Strength Focus',
         workoutPostId: weekId,
         sharedDayOfWeek: dayOfWeek || null,
+        cardioSessionId: cardioSessionId || null,
+        activityType: activityType || null,
       },
       include: { user: { select: { id: true, username: true } } },
     });
 
-    res.json({ ...post, createdAt: post.createdAt.toISOString(), likeCount: 0, commentCount: 0, likedByMe: false, hasWorkout: true, workoutPostId: weekId, sharedDayOfWeek: post.sharedDayOfWeek });
+    res.json({ ...post, createdAt: post.createdAt.toISOString(), likeCount: 0, commentCount: 0, likedByMe: false, hasWorkout: !!post.workoutPostId, workoutPostId: weekId, sharedDayOfWeek: post.sharedDayOfWeek, cardioSessionId: post.cardioSessionId, activityType: post.activityType });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -118,7 +123,31 @@ router.get('/posts/:id/workout', async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json({ ...week, sharedDayOfWeek: post.sharedDayOfWeek });
+    res.json({ ...week, sharedDayOfWeek: post.sharedDayOfWeek, activityType: post.activityType });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/community/posts/:id/cardio — get cardio session for a post
+router.get('/posts/:id/cardio', async (req: AuthRequest, res: Response) => {
+  try {
+    const post = await prisma.post.findUnique({ where: { id: Number(req.params.id) } });
+    if (!post || !post.cardioSessionId) return res.status(404).json({ error: 'No cardio session linked' });
+
+    const session = await prisma.cardioSession.findUnique({
+      where: { id: post.cardioSessionId },
+      include: { day: { include: { week: { select: { weekNumber: true } } } } },
+    });
+    if (!session) return res.status(404).json({ error: 'Cardio session not found' });
+
+    res.json({
+      type: session.type, distanceKm: session.distanceKm, durationMinutes: session.durationMinutes,
+      avgHeartRate: session.avgHeartRate, elevationM: session.elevationM,
+      avgPaceMinKm: session.avgPaceMinKm, avgSpeedKmh: session.avgSpeedKmh,
+      calories: session.calories, notes: session.notes,
+      dayOfWeek: session.day.dayOfWeek, weekNumber: session.day.week.weekNumber,
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
