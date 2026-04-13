@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { prisma } from '../index';
+import { createNotification, extractMentions } from './notifications';
 
 const router = Router();
 
@@ -66,6 +67,12 @@ router.post('/posts', async (req: AuthRequest, res: Response) => {
       data: { userId: req.userId!, content: content.trim(), category: category || null },
       include: { user: { select: { id: true, username: true } } },
     });
+    // Notify @mentions
+    const mentions = extractMentions(content);
+    for (const uname of mentions) {
+      const mentioned = await prisma.user.findUnique({ where: { username: uname }, select: { id: true } });
+      if (mentioned && mentioned.id !== req.userId) await createNotification(mentioned.id, req.userId!, 'mention', `${post.user.username} mentioned you in a post`, post.id);
+    }
 
     res.json({ ...post, createdAt: post.createdAt.toISOString(), likeCount: 0, commentCount: 0, likedByMe: false, hasWorkout: false, workoutPostId: null });
   } catch (err: any) {
@@ -175,7 +182,12 @@ router.post('/posts/:id/like', async (req: AuthRequest, res: Response) => {
     const postId = Number(req.params.id);
     const existing = await prisma.like.findUnique({ where: { postId_userId: { postId, userId: req.userId! } } });
     if (existing) { await prisma.like.delete({ where: { id: existing.id } }); }
-    else { await prisma.like.create({ data: { postId, userId: req.userId! } }); }
+    else {
+      await prisma.like.create({ data: { postId, userId: req.userId! } });
+      const post = await prisma.post.findUnique({ where: { id: postId }, select: { userId: true } });
+      const me = await prisma.user.findUnique({ where: { id: req.userId }, select: { username: true } });
+      if (post && me) await createNotification(post.userId, req.userId!, 'like', `${me.username} liked your post`, postId);
+    }
     const count = await prisma.like.count({ where: { postId } });
     res.json({ liked: !existing, count });
   } catch (err: any) {
@@ -203,10 +215,20 @@ router.post('/posts/:id/comments', async (req: AuthRequest, res: Response) => {
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: 'Content is required' });
 
+    const postId = Number(req.params.id);
     const comment = await prisma.comment.create({
-      data: { postId: Number(req.params.id), userId: req.userId!, content: content.trim() },
+      data: { postId, userId: req.userId!, content: content.trim() },
       include: { user: { select: { id: true, username: true } } },
     });
+    // Notify post author
+    const post = await prisma.post.findUnique({ where: { id: postId }, select: { userId: true } });
+    if (post && comment.user) await createNotification(post.userId, req.userId!, 'comment', `${comment.user.username} commented on your post`, postId, comment.id);
+    // Notify @mentions
+    const mentions = extractMentions(content);
+    for (const uname of mentions) {
+      const mentioned = await prisma.user.findUnique({ where: { username: uname }, select: { id: true } });
+      if (mentioned && mentioned.id !== req.userId) await createNotification(mentioned.id, req.userId!, 'mention', `${comment.user.username} mentioned you in a comment`, postId, comment.id);
+    }
     res.json({ ...comment, createdAt: comment.createdAt.toISOString() });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

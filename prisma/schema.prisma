@@ -22,9 +22,12 @@ model User {
   posts         Post[]
   likes         Like[]
   comments      Comment[]
-  followers     Follow[] @relation("UserFollowing")
-  following     Follow[] @relation("UserFollowers")
-  bodyWeights   BodyWeight[]
+  followers          Follow[] @relation("UserFollowing")
+  following          Follow[] @relation("UserFollowers")
+  bodyWeights        BodyWeight[]
+  notifications      Notification[] @relation("UserNotifications")
+  sentNotifications  Notification[] @relation("NotificationSender")
+  privacySettings    UserPrivacySettings?
 }
 
 model BodyWeight {
@@ -149,4 +152,29 @@ model Comment {
   createdAt DateTime @default(now())
   post      Post     @relation(fields: [postId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  fromUserId Int?
+  type       String
+  message    String
+  read       Boolean  @default(false)
+  postId     Int?
+  commentId  Int?
+  createdAt  DateTime @default(now())
+  user       User     @relation("UserNotifications", fields: [userId], references: [id])
+  fromUser   User?    @relation("NotificationSender", fields: [fromUserId], references: [id])
+}
+
+model UserPrivacySettings {
+  id              Int     @id @default(autoincrement())
+  userId          Int     @unique
+  profilePublic   Boolean @default(true)
+  showWorkouts    Boolean @default(true)
+  showNutrition   Boolean @default(false)
+  showStats       Boolean @default(true)
+  allowFollowers  Boolean @default(true)
+  user            User    @relation(fields: [userId], references: [id])
 }

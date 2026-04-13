@@ -272,7 +272,7 @@ function PostCard({ post, currentUserId, onLike, onDelete, onViewWorkout, onView
     <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant text-sm font-bold font-headline flex-shrink-0">{post.user.username.charAt(0).toUpperCase()}</div>
-        <div className="flex-1 min-w-0"><p className="font-headline font-bold text-sm text-on-surface">{post.user.username}</p><p className="text-[11px] text-outline font-label">{timeAgo(post.createdAt)}</p></div>
+        <div className="flex-1 min-w-0"><a href={`/profile/${post.user.username}`} className="font-headline font-bold text-sm text-on-surface hover:text-primary transition-colors">{post.user.username}</a><p className="text-[11px] text-outline font-label">{timeAgo(post.createdAt)}</p></div>
         {post.category && <span className="bg-primary-fixed text-primary text-[10px] rounded-full px-2.5 py-1 font-label font-bold uppercase tracking-wider">{post.category}</span>}
         {isOwn && (
           <div className="relative">

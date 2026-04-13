@@ -11,6 +11,7 @@ import Nutrition from './pages/Nutrition';
 import Trends from './pages/Trends';
 import Community from './pages/Community';
 import Admin from './pages/Admin';
+import Profile from './pages/Profile';
 import type { ReactNode } from 'react';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -48,6 +49,7 @@ function AppRoutes() {
         <Route path="trends" element={<Trends />} />
         <Route path="nutrition" element={<Nutrition />} />
         <Route path="community" element={<Community />} />
+        <Route path="profile/:username" element={<Profile />} />
         <Route path="admin" element={<Admin />} />
       </Route>
     </Routes>
