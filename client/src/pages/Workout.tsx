@@ -555,6 +555,8 @@ function SummaryPill({ value, unit }: { value: string; unit: string }) {
 function EditableText({ value, onSave, className }: { value: string; onSave: (v: string) => void; className?: string }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value);
+  // Sync text with prop when not editing
+  useEffect(() => { if (!editing) setText(value); }, [value, editing]);
   if (editing) {
     return <input value={text} onChange={(e) => setText(e.target.value)}
       onClick={(e) => e.stopPropagation()}
@@ -569,6 +571,8 @@ function EditableText({ value, onSave, className }: { value: string; onSave: (v:
 function EditableNumber({ value, onSave, decimal }: { value: number | null; onSave: (v: number | null) => void; decimal?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value?.toString() ?? '');
+  // Sync text with prop when not editing
+  useEffect(() => { if (!editing) setText(value?.toString() ?? ''); }, [value, editing]);
   if (editing) {
     return <input value={text} onChange={(e) => setText(e.target.value)} type="number" step={decimal ? '0.5' : '1'}
       onClick={(e) => e.stopPropagation()}
@@ -588,6 +592,8 @@ function EditableNumber({ value, onSave, decimal }: { value: number | null; onSa
 function FeedbackInput({ value, onSave }: { value: string | null; onSave: (v: string | null) => void }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value ?? '');
+  // Sync text with prop when not editing
+  useEffect(() => { if (!editing) setText(value ?? ''); }, [value, editing]);
   const save = () => { onSave(text.trim() || null); setEditing(false); };
   if (editing) {
     return <input value={text} onChange={(e) => setText(e.target.value)} onBlur={save}
