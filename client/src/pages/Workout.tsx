@@ -67,7 +67,21 @@ export default function Workout() {
   const addExercise = async (nameOverride?: string) => { const name = (nameOverride || newExName).trim(); if (!currentDay || !name) return; await api.post('/exercises', { dayId: currentDay.id, name, order: currentDay.exercises.length }); setNewExName(''); await fetchWeeks(); api.get('/exercises/history').then(({ data }) => setExerciseHistory(data)).catch(() => {}); };
   const deleteExercise = async (exId: number) => { await api.delete(`/exercises/${exId}`); await fetchWeeks(); };
   const addSet = async (exercise: ExerciseData) => { const last = exercise.sets[exercise.sets.length - 1]; await api.post('/sets', { exerciseId: exercise.id, reps: last?.reps ?? null, weightKg: last?.weightKg ?? null }); await fetchWeeks(); };
-  const updateSet = async (setId: number, field: string, value: any) => { await api.put(`/sets/${setId}`, { [field]: value }); await fetchWeeks(); };
+  const updateSet = async (setId: number, field: string, value: any) => {
+    // Optimistic local update — update the specific set in local state immediately
+    setWeeks(prev => prev.map(w => ({
+      ...w,
+      days: w.days.map(d => ({
+        ...d,
+        exercises: d.exercises.map(ex => ({
+          ...ex,
+          sets: ex.sets.map(s => s.id === setId ? { ...s, [field]: value } : s),
+        })),
+      })),
+    })));
+    // Then persist to server
+    await api.put(`/sets/${setId}`, { [field]: value });
+  };
   const deleteSet = async (setId: number) => { await api.delete(`/sets/${setId}`); await fetchWeeks(); };
   const updateExerciseName = async (exId: number, name: string) => { await api.put(`/exercises/${exId}`, { name }); await fetchWeeks(); };
 
