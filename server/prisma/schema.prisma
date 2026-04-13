@@ -93,16 +93,17 @@ model Set {
 }
 
 model Meal {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  date      DateTime
-  name      String
-  calories  Int
-  proteinG  Float
-  carbsG    Float
-  fatG      Float
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  date        DateTime
+  name        String
+  calories    Int
+  proteinG    Float
+  carbsG      Float
+  fatG        Float
+  photoBase64 String?  @db.Text
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model Post {

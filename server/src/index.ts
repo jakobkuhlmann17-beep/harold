@@ -28,7 +28,7 @@ const allowedOrigins = [
 ].filter(Boolean) as string[];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Public routes
 app.use('/api/auth', authRoutes);
