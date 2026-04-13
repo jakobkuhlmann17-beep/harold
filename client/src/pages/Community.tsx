@@ -4,7 +4,7 @@ import api from '../lib/api';
 import { timeAgo } from '../utils/timeAgo';
 
 interface PostUser { id: number; username: string; }
-interface PostData { id: number; content: string; category: string | null; createdAt: string; user: PostUser; likeCount: number; commentCount: number; likedByMe: boolean; hasWorkout?: boolean; workoutPostId?: number | null; }
+interface PostData { id: number; content: string; category: string | null; createdAt: string; user: PostUser; likeCount: number; commentCount: number; likedByMe: boolean; hasWorkout?: boolean; workoutPostId?: number | null; sharedDayOfWeek?: string | null; }
 interface CommentData { id: number; content: string; createdAt: string; user: PostUser; }
 interface LeaderRow { rank: number; username: string; totalSets: number; isCurrentUser: boolean; }
 interface SearchUser { id: number; username: string; followerCount: number; followingCount: number; isFollowedByMe: boolean; }
@@ -269,13 +269,16 @@ function PostCard({ post, currentUserId, onLike, onDelete, onViewWorkout }: {
         <div className="bg-primary-fixed/30 rounded-xl p-4 border border-primary-fixed mb-3">
           <div className="flex items-center justify-between mb-2">
             <p className="font-headline font-bold text-sm text-on-surface flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[18px]">fitness_center</span> Shared Workout
+              <span className="material-symbols-outlined text-[18px]">fitness_center</span>
+              {post.sharedDayOfWeek
+                ? `${post.sharedDayOfWeek.charAt(0) + post.sharedDayOfWeek.slice(1).toLowerCase()} Workout`
+                : 'Full Week Workout'}
             </p>
             <button onClick={onViewWorkout} className="text-primary font-bold text-xs font-headline flex items-center gap-1 hover:gap-2 transition-all">
-              View Full <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+              View {post.sharedDayOfWeek ? 'Day' : 'Week'} <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
             </button>
           </div>
-          <p className="text-xs text-on-surface-variant font-body">Tap to view the full workout plan with all exercises, sets and weights.</p>
+          <p className="text-xs text-on-surface-variant font-body">Tap to view exercises, sets and weights.</p>
         </div>
       )}
 
@@ -326,7 +329,11 @@ function WorkoutModal({ data, onClose }: { data: any; onClose: () => void }) {
       <div className="bg-surface-container-lowest rounded-3xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-surface-container-lowest rounded-t-3xl p-6 pb-3 border-b border-outline-variant/20 flex items-center justify-between z-10">
           <div>
-            <p className="font-headline font-bold text-lg text-on-surface">{data.user?.username}&apos;s Week {data.weekNumber}</p>
+            <p className="font-headline font-bold text-lg text-on-surface">
+              {data.user?.username}'s {data.sharedDayOfWeek
+                ? `${data.sharedDayOfWeek.charAt(0) + data.sharedDayOfWeek.slice(1).toLowerCase()}${data.days?.[0]?.focus ? ' \u2014 ' + data.days[0].focus.charAt(0).toUpperCase() + data.days[0].focus.slice(1) : ''}`
+                : `Week ${data.weekNumber}`}
+            </p>
             <p className="text-xs text-on-surface-variant font-label">{data.createdAt?.split('T')[0]}</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center hover:bg-surface-container-highest transition-colors">

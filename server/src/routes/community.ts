@@ -33,6 +33,7 @@ router.get('/posts', async (req: AuthRequest, res: Response) => {
       content: p.content,
       category: p.category,
       workoutPostId: p.workoutPostId,
+      sharedDayOfWeek: p.sharedDayOfWeek,
       hasWorkout: !!p.workoutPostId,
       createdAt: p.createdAt.toISOString(),
       user: p.user,
@@ -65,10 +66,10 @@ router.post('/posts', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/community/posts/share-workout — share a week as a post
+// POST /api/community/posts/share-workout — share a week or single day as a post
 router.post('/posts/share-workout', async (req: AuthRequest, res: Response) => {
   try {
-    const { weekId, content, category } = req.body;
+    const { weekId, dayOfWeek, content, category } = req.body;
     if (!weekId) return res.status(400).json({ error: 'weekId is required' });
 
     const week = await prisma.week.findFirst({ where: { id: weekId, userId: req.userId } });
@@ -80,11 +81,12 @@ router.post('/posts/share-workout', async (req: AuthRequest, res: Response) => {
         content: (content || `Just completed Week ${week.weekNumber}!`).trim(),
         category: category || 'Strength Focus',
         workoutPostId: weekId,
+        sharedDayOfWeek: dayOfWeek || null,
       },
       include: { user: { select: { id: true, username: true } } },
     });
 
-    res.json({ ...post, createdAt: post.createdAt.toISOString(), likeCount: 0, commentCount: 0, likedByMe: false, hasWorkout: true, workoutPostId: weekId });
+    res.json({ ...post, createdAt: post.createdAt.toISOString(), likeCount: 0, commentCount: 0, likedByMe: false, hasWorkout: true, workoutPostId: weekId, sharedDayOfWeek: post.sharedDayOfWeek });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -96,11 +98,14 @@ router.get('/posts/:id/workout', async (req: AuthRequest, res: Response) => {
     const post = await prisma.post.findUnique({ where: { id: Number(req.params.id) } });
     if (!post || !post.workoutPostId) return res.status(404).json({ error: 'No workout linked' });
 
+    const dayFilter = post.sharedDayOfWeek ? { dayOfWeek: post.sharedDayOfWeek } : {};
+
     const week = await prisma.week.findUnique({
       where: { id: post.workoutPostId },
       include: {
         user: { select: { id: true, username: true } },
         days: {
+          where: dayFilter,
           include: {
             exercises: { include: { sets: true }, orderBy: { order: 'asc' } },
             cardioSession: true,
@@ -109,7 +114,7 @@ router.get('/posts/:id/workout', async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json(week);
+    res.json({ ...week, sharedDayOfWeek: post.sharedDayOfWeek });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

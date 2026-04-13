@@ -32,6 +32,8 @@ export default function Workout() {
   const [shareContent, setShareContent] = useState('');
   const [shareCategory, setShareCategory] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [shareMode, setShareMode] = useState<'day' | 'week'>('day');
+  const [shareDay, setShareDay] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; confirmStyle: 'error' | 'primary'; onConfirm: () => Promise<void> } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const showToast = useCallback((msg: string) => setToast(msg), []);
@@ -144,8 +146,10 @@ export default function Workout() {
     if (!currentWeek) return;
     setSharing(true);
     try {
-      await api.post('/community/posts/share-workout', { weekId: currentWeek.id, content: shareContent || `Just completed Week ${currentWeek.weekNumber}!`, category: shareCategory });
-      setShareOpen(false); setShareContent(''); setShareCategory(null);
+      const payload: any = { weekId: currentWeek.id, content: shareContent || `Just completed Week ${currentWeek.weekNumber}!`, category: shareCategory };
+      if (shareMode === 'day' && shareDay) payload.dayOfWeek = shareDay;
+      await api.post('/community/posts/share-workout', payload);
+      setShareOpen(false); setShareContent(''); setShareCategory(null); setShareMode('day'); setShareDay(null);
       showToast('Workout shared to your community wall!');
     } catch (err: any) { alert(err.response?.data?.error || 'Failed to share'); }
     setSharing(false);
@@ -191,7 +195,7 @@ export default function Workout() {
             </button>
           )}
           {currentWeek && hasCompletedSets && (
-            <button onClick={() => setShareOpen(true)} className="bg-surface-container-low rounded-full px-4 py-2 text-xs font-headline flex items-center gap-2 hover:bg-surface-container-high transition-colors text-on-surface-variant">
+            <button onClick={() => { setShareOpen(true); setShareDay(currentDay?.dayOfWeek || null); setShareMode('day'); }} className="bg-surface-container-low rounded-full px-4 py-2 text-xs font-headline flex items-center gap-2 hover:bg-surface-container-high transition-colors text-on-surface-variant">
               <span className="material-symbols-outlined text-[14px]">share</span> Share as Pulse
             </button>
           )}
@@ -218,35 +222,55 @@ export default function Workout() {
 
       {/* Share as Pulse modal */}
       {shareOpen && currentWeek && (() => {
-        const completedSets = currentWeek.days?.reduce((s: number, d: any) => s + (d.exercises?.flatMap((e: any) => e.sets).filter((st: any) => st.completed).length || 0), 0) || 0;
-        const totalExercises = currentWeek.days?.reduce((s: number, d: any) => s + (d.exercises?.length || 0), 0) || 0;
-        const focusList = [...new Set(currentWeek.days?.map((d: any) => d.focus).filter(Boolean) || [])];
-        const exerciseNames = [...new Set(currentWeek.days?.flatMap((d: any) => d.exercises?.map((e: any) => e.name) || []) || [])].slice(0, 5);
+        const daysWithSets = (currentWeek.days || []).filter((d: any) => d.exercises?.some((e: any) => e.sets?.some((s: any) => s.completed)));
+        const selectedDayData = shareMode === 'day' && shareDay ? (currentWeek.days || []).find((d: any) => d.dayOfWeek === shareDay) : null;
+
+        // Preview data
+        const previewDays = shareMode === 'day' && selectedDayData ? [selectedDayData] : currentWeek.days || [];
+        const completedSets = previewDays.reduce((s: number, d: any) => s + (d.exercises?.flatMap((e: any) => e.sets).filter((st: any) => st.completed).length || 0), 0);
+        const totalExercises = previewDays.reduce((s: number, d: any) => s + (d.exercises?.length || 0), 0);
+        const exerciseNames = [...new Set(previewDays.flatMap((d: any) => d.exercises?.map((e: any) => e.name) || []))].slice(0, 5);
+        const dayLabel = selectedDayData ? `${selectedDayData.dayOfWeek.charAt(0) + selectedDayData.dayOfWeek.slice(1).toLowerCase()}${selectedDayData.focus ? ' \u2014 ' + selectedDayData.focus.charAt(0).toUpperCase() + selectedDayData.focus.slice(1) : ''}` : '';
+
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => setShareOpen(false)}>
             <div className="bg-surface-container-lowest rounded-3xl max-w-lg w-full mx-4 p-8 shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
               <h3 className="font-headline font-bold text-xl text-on-surface">Share your workout</h3>
-              {/* Workout preview */}
+
+              {/* Day / Week toggle */}
+              <div className="bg-surface-container-low rounded-full p-1 flex gap-1 w-fit">
+                <button onClick={() => setShareMode('day')} className={`rounded-full px-5 py-2 text-sm font-headline font-bold transition-all ${shareMode === 'day' ? 'hearth-glow text-white' : 'text-on-surface-variant'}`}>Single Day</button>
+                <button onClick={() => setShareMode('week')} className={`rounded-full px-5 py-2 text-sm font-headline font-bold transition-all ${shareMode === 'week' ? 'hearth-glow text-white' : 'text-on-surface-variant'}`}>Full Week</button>
+              </div>
+
+              {/* Day selector (when single day mode) */}
+              {shareMode === 'day' && (
+                <div className="flex flex-wrap gap-2">
+                  {daysWithSets.map((d: any) => (
+                    <button key={d.dayOfWeek} onClick={() => setShareDay(d.dayOfWeek)}
+                      className={`rounded-full px-4 py-1.5 text-xs font-headline font-bold transition-all ${shareDay === d.dayOfWeek ? 'hearth-glow text-white' : 'bg-surface-container rounded-full border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container-high'}`}>
+                      {DAY_SHORT[d.dayOfWeek]} &check;
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Preview card */}
               <div className="bg-primary-fixed/30 rounded-2xl p-4 border border-primary-fixed">
                 <p className="font-headline font-bold text-sm text-on-surface flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">fitness_center</span>
-                  Week {currentWeek.weekNumber}
+                  {shareMode === 'day' ? dayLabel : `Week ${currentWeek.weekNumber} \u2014 Full Week`}
                 </p>
-                <p className="text-sm text-on-surface-variant font-body mt-1">{completedSets} sets completed &middot; {totalExercises} exercises</p>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {focusList.slice(0, 4).map((f: string) => (
-                    <span key={f} className="bg-surface-container rounded-full px-2 py-1 text-xs font-label text-on-surface-variant">{f}</span>
-                  ))}
-                </div>
+                <p className="text-sm text-on-surface-variant font-body mt-1">
+                  {shareMode === 'week' && `${daysWithSets.length} days \u00b7 `}{completedSets} sets completed &middot; {totalExercises} exercises
+                </p>
                 <div className="flex flex-wrap gap-1 mt-2">
                   {exerciseNames.map((n: string) => (
                     <span key={n} className="bg-surface-container-lowest rounded-full px-2 py-0.5 text-[10px] font-label text-on-surface-variant">{n}</span>
                   ))}
-                  {[...new Set(currentWeek.days?.flatMap((d: any) => d.exercises?.map((e: any) => e.name) || []) || [])].length > 5 && (
-                    <span className="text-[10px] text-on-surface-variant font-label">+{[...new Set(currentWeek.days?.flatMap((d: any) => d.exercises?.map((e: any) => e.name) || []) || [])].length - 5} more</span>
-                  )}
                 </div>
               </div>
+
               <textarea value={shareContent} onChange={(e) => setShareContent(e.target.value)} placeholder="Add a caption..."
                 className="w-full bg-surface-container-low rounded-xl p-4 text-sm font-body text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none h-24" />
               <div>
@@ -260,7 +284,7 @@ export default function Workout() {
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={() => setShareOpen(false)} className="bg-surface-container-high rounded-full px-6 py-3 text-sm font-headline font-bold text-on-surface hover:bg-surface-container-highest transition-colors">Cancel</button>
-                <button onClick={shareWorkout} disabled={sharing}
+                <button onClick={shareWorkout} disabled={sharing || (shareMode === 'day' && !shareDay)}
                   className="hearth-glow text-white rounded-full px-6 py-3 text-sm font-headline font-bold hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
                   {sharing && <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>}
                   Post to Community &rarr;
