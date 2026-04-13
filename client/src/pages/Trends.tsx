@@ -14,16 +14,36 @@ export default function Trends() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
+  const [heatmapMonth, setHeatmapMonth] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`; });
+  const [currentWeekData, setCurrentWeekData] = useState<any>(null);
+
+  const fetchConsistency = async (month: string) => {
+    const { data } = await api.get(`/trends/consistency?month=${month}`);
+    setConsistency(data);
+  };
 
   useEffect(() => {
     Promise.all([
-      api.get('/trends/workout-completion'), api.get('/trends/consistency'),
+      api.get('/trends/workout-completion'), api.get(`/trends/consistency?month=${heatmapMonth}`),
       api.get('/trends/records'), api.get('/trends/milestones'), api.get('/trends/insights'),
-    ]).then(([wc, c, r, m, ins]) => {
+      api.get('/trends/current-week'),
+    ]).then(([wc, c, r, m, ins, cw]) => {
       setCompletion(wc.data); setConsistency(c.data); setRecords(r.data); setMilestones(m.data); setInsights(ins.data);
+      setCurrentWeekData(cw.data);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  const shiftMonth = (delta: number) => {
+    const [y, m] = heatmapMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    const newMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    setHeatmapMonth(newMonth);
+    fetchConsistency(newMonth);
+  };
+
+  const isCurrentMonth = (() => { const n = new Date(); return heatmapMonth === `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`; })();
+  const monthLabel = (() => { const [y, m] = heatmapMonth.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); })();
 
   // Volume data for weight progress
   const weeklyVolume = computeWeeklyVolume(consistency);
@@ -116,25 +136,80 @@ export default function Trends() {
         </div>
       </div>
 
-      {/* Heatmap */}
+      {/* Monthly Heatmap */}
       <div className="bg-surface-container-lowest rounded-3xl p-6 lg:p-8 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-headline text-2xl font-bold text-on-surface">Consistency Heatmap</h3>
-            <p className="text-sm text-on-surface-variant font-body">Daily workout frequency over the last year</p>
+            <p className="text-sm text-on-surface-variant font-body">Daily workout frequency</p>
           </div>
-          <HeatmapLegend />
+          <div className="flex items-center gap-3">
+            <button onClick={() => shiftMonth(-1)} className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center transition-colors text-on-surface-variant">
+              <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+            </button>
+            <span className="font-headline font-bold text-lg text-on-surface min-w-[140px] text-center">{monthLabel}</span>
+            <button onClick={() => shiftMonth(1)} disabled={isCurrentMonth} className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center transition-colors text-on-surface-variant disabled:opacity-30">
+              <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+            </button>
+          </div>
         </div>
-        <Heatmap data={consistency} />
-        {/* Summary below heatmap */}
-        {insights && (
-          <div className="flex flex-wrap gap-4 mt-4 text-xs font-label text-on-surface-variant">
-            <span>Total active days: <span className="font-bold text-on-surface">{consistency.filter(d => d.count > 0).length}</span></span>
-            <span>Longest streak: <span className="font-bold text-on-surface">{insights.longestStreak} days</span></span>
-            <span>Current streak: <span className="font-bold text-on-surface">{insights.currentStreak} days</span></span>
-          </div>
-        )}
+        <MonthlyHeatmap data={consistency} month={heatmapMonth} />
+        <div className="flex items-center justify-between mt-4">
+          <HeatmapLegend />
+          {insights && (
+            <div className="flex gap-4 text-xs font-label text-on-surface-variant">
+              <span>Active: <span className="font-bold text-on-surface">{consistency.filter(d => d.count > 0).length}</span> days</span>
+              <span>Streak: <span className="font-bold text-on-surface">{insights.currentStreak}</span> days</span>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Current Week Progress */}
+      {currentWeekData && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="uppercase tracking-widest text-xs font-bold text-tertiary font-label">Current Week</p>
+              <h3 className="font-headline text-2xl font-bold text-on-surface">This Week's Progress</h3>
+            </div>
+            <span className="text-sm text-on-surface-variant font-body">Week {currentWeekData.weekNumber} &mdash; {currentWeekData.weekStart?.slice(5)} to {currentWeekData.weekEnd?.slice(5)}</span>
+          </div>
+          <div className="grid grid-cols-7 gap-2 lg:gap-3">
+            {currentWeekData.days?.map((d: any) => {
+              const pct = d.totalSets > 0 ? (d.completedSets / d.totalSets) * 100 : 0;
+              return (
+                <div key={d.dayOfWeek} className={`bg-surface-container-lowest rounded-2xl p-3 lg:p-4 border transition-all ${d.isToday ? 'border-primary border-2' : 'border-outline-variant/20'} ${d.isFuture ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-black uppercase text-on-surface-variant">{d.dayOfWeek.slice(0, 3)}</span>
+                    {d.isToday && <span className="bg-primary text-white rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase">Today</span>}
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant">{d.date?.slice(5)}</p>
+                  {d.focus && <p className="text-[10px] font-bold text-primary mt-1">{d.focus}</p>}
+                  {d.totalSets > 0 && !d.isFuture && (
+                    <>
+                      <div className="w-full bg-surface-container-high rounded-full h-1.5 mt-2">
+                        <div className="hearth-glow h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                      <p className="text-[10px] font-bold text-on-surface mt-1">{d.completedSets}/{d.totalSets}</p>
+                      <div className="mt-1 space-y-0.5">
+                        {d.exercises?.slice(0, 3).map((ex: any, i: number) => (
+                          <div key={i} className="flex items-center gap-1">
+                            <span className={`w-1.5 h-1.5 rounded-full ${ex.completed ? 'bg-[#2e7d32]' : 'bg-outline-variant'}`} />
+                            <span className={`text-[9px] ${ex.completed ? 'text-on-surface' : 'text-on-surface-variant'}`}>{ex.name}</span>
+                          </div>
+                        ))}
+                        {d.exercises?.length > 3 && <span className="text-[9px] text-on-surface-variant">+{d.exercises.length - 3} more</span>}
+                      </div>
+                    </>
+                  )}
+                  {d.totalSets === 0 && !d.isFuture && <p className="text-[9px] text-on-surface-variant italic mt-2">Rest day</p>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Volume + Milestones */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -281,37 +356,52 @@ function HeatmapLegend() {
   return (<div className="flex items-center gap-1 text-[10px] text-on-surface-variant font-label"><span>Less</span>{colors.map((c, i) => <div key={i} className="w-3 h-3 rounded-sm" style={{ backgroundColor: c }} />)}<span>More</span></div>);
 }
 
-function Heatmap({ data }: { data: ConsistencyDay[] }) {
-  const today = new Date();
-  const totalDays = 364;
+function MonthlyHeatmap({ data, month }: { data: ConsistencyDay[]; month: string }) {
   const lookup: Record<string, number> = {};
   for (const d of data) lookup[d.date] = d.count;
-  const cells: { date: string; count: number; col: number; row: number }[] = [];
-  const startDate = new Date(today); startDate.setDate(startDate.getDate() - totalDays);
-  const startDay = startDate.getDay();
-  const mondayOffset = startDay === 0 ? 1 : startDay === 1 ? 0 : 8 - startDay;
-  startDate.setDate(startDate.getDate() + mondayOffset);
-  let col = 0;
-  const d = new Date(startDate);
-  const monthLabels: { label: string; col: number }[] = [];
-  let lastMonth = -1;
-  while (d <= today) {
-    const dayOfWeek = d.getDay(); const row = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const dateStr = d.toISOString().split('T')[0];
-    if (row === 0) { const month = d.getMonth(); if (month !== lastMonth) { monthLabels.push({ label: d.toLocaleDateString('en', { month: 'short' }), col }); lastMonth = month; } }
-    cells.push({ date: dateStr, count: lookup[dateStr] || 0, col: row === 0 ? col : col, row });
-    d.setDate(d.getDate() + 1);
-    if (dayOfWeek === 0) col++;
-  }
-  const maxCol = Math.max(...cells.map(c => c.col), 0);
+  const [y, m] = month.split('-').map(Number);
+  const firstDay = new Date(y, m - 1, 1);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const startDow = firstDay.getDay(); // 0=Sun
+  const offset = startDow === 0 ? 6 : startDow - 1; // Mon=0
+
   const cellColor = (count: number) => { if (count === 0) return '#eae7e7'; if (count <= 2) return '#ffdbcc'; if (count <= 5) return '#ffb694'; if (count <= 9) return 'rgba(242,109,33,0.6)'; return '#a14000'; };
-  const cellSize = 12; const gap = 3;
+  const textColor = (count: number) => count >= 10 ? 'white' : count >= 3 ? '#a14000' : '#8c7166';
+  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  const cells: { day: number; row: number; col: number; count: number; date: string; isThisMonth: boolean }[] = [];
+  for (let i = 0; i < 42; i++) {
+    const col = i % 7; const row = Math.floor(i / 7);
+    const dayNum = i - offset + 1;
+    if (dayNum < 1 || dayNum > daysInMonth) {
+      cells.push({ day: dayNum < 1 ? new Date(y, m - 2, 0).getDate() + dayNum : dayNum - daysInMonth, row, col, count: 0, date: '', isThisMonth: false });
+    } else {
+      const d = new Date(y, m - 1, dayNum);
+      const ds = d.toISOString().split('T')[0];
+      cells.push({ day: dayNum, row, col, count: lookup[ds] || 0, date: ds, isThisMonth: true });
+    }
+  }
+  // Remove trailing rows that are entirely next month
+  while (cells.length > 7 && cells.slice(-7).every(c => !c.isThisMonth)) cells.splice(-7);
+
   return (
-    <div className="overflow-x-auto -mx-2 px-2">
-      <svg width={(maxCol + 1) * (cellSize + gap) + 30} height={7 * (cellSize + gap) + 20} className="min-w-[700px]">
-        {monthLabels.map((m, i) => <text key={i} x={m.col * (cellSize + gap)} y={10} fontSize="9" fill="#8c7166" fontFamily="Manrope">{m.label}</text>)}
-        {cells.map((c, i) => <rect key={i} x={c.col * (cellSize + gap)} y={c.row * (cellSize + gap) + 16} width={cellSize} height={cellSize} rx="2" fill={cellColor(c.count)}><title>{c.date}: {c.count} sets</title></rect>)}
-      </svg>
+    <div>
+      <div className="grid grid-cols-7 gap-2 mb-2">
+        {dayLabels.map(l => <div key={l} className="text-center text-xs uppercase font-bold text-on-surface-variant">{l}</div>)}
+      </div>
+      <div className="grid grid-cols-7 gap-2">
+        {cells.map((c, i) => (
+          <div key={i} className={`w-full aspect-square rounded-xl flex items-center justify-center relative group ${!c.isThisMonth ? 'opacity-30' : ''}`}
+            style={{ backgroundColor: c.isThisMonth ? cellColor(c.count) : '#eae7e7' }} title={c.date ? `${c.date}: ${c.count} sets` : ''}>
+            <span className="text-xs font-bold" style={{ color: c.isThisMonth ? textColor(c.count) : '#bbb' }}>{c.day}</span>
+            {c.isThisMonth && c.count > 0 && (
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1b1c1c] text-white rounded-lg px-2 py-1 text-[9px] font-body whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                {c.count} sets
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

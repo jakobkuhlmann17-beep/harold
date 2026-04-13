@@ -201,7 +201,7 @@ router.get('/insights', async (req: AuthRequest, res: Response) => {
   } catch (err: any) { console.error('Insights error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/trends/consistency (unchanged)
+// GET /api/trends/consistency?month=2026-04
 router.get('/consistency', async (req: AuthRequest, res: Response) => {
   try {
     const weeks = await getUserWeeks(req.userId);
@@ -218,10 +218,64 @@ router.get('/consistency', async (req: AuthRequest, res: Response) => {
         if (cnt > 0) dayCounts[dateStr] = (dayCounts[dateStr] || 0) + cnt;
       }
     }
+
+    const monthParam = req.query.month as string | undefined;
+    const now = new Date();
+    const year = monthParam ? parseInt(monthParam.split('-')[0]) : now.getFullYear();
+    const month = monthParam ? parseInt(monthParam.split('-')[1]) - 1 : now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
     const result = [];
-    const today = new Date();
-    for (let i = 364; i >= 0; i--) { const d = new Date(today); d.setDate(d.getDate() - i); const ds = d.toISOString().split('T')[0]; result.push({ date: ds, count: dayCounts[ds] || 0 }); }
+    for (let i = 1; i <= daysInMonth; i++) {
+      const d = new Date(year, month, i);
+      const ds = d.toISOString().split('T')[0];
+      result.push({ date: ds, count: dayCounts[ds] || 0 });
+    }
     res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/trends/current-week
+router.get('/current-week', async (req: AuthRequest, res: Response) => {
+  try {
+    const weeks = await getUserWeeks(req.userId);
+    if (weeks.length === 0) return res.json(null);
+
+    const latestWeek = weeks[weeks.length - 1];
+    const dayOrder = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+    const now = new Date();
+    const todayDow = now.getDay();
+    const mondayOffset = todayDow === 0 ? -6 : 1 - todayDow;
+    const monday = new Date(now); monday.setDate(monday.getDate() + mondayOffset);
+
+    const days = dayOrder.map((dow, i) => {
+      const d = new Date(monday); d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayData = latestWeek.days.find(dd => dd.dayOfWeek === dow);
+      const isToday = dateStr === now.toISOString().split('T')[0];
+      const isPast = d < new Date(now.toISOString().split('T')[0]);
+      const isFuture = !isToday && !isPast;
+
+      if (!dayData) return { dayOfWeek: dow, date: dateStr, focus: '', totalExercises: 0, completedExercises: 0, totalSets: 0, completedSets: 0, exercises: [], isToday, isPast, isFuture };
+
+      const exercises = dayData.exercises.map(ex => ({
+        name: ex.name,
+        completed: ex.sets.length > 0 && ex.sets.every(s => s.completed),
+      }));
+
+      return {
+        dayOfWeek: dow, date: dateStr, focus: dayData.focus,
+        totalExercises: dayData.exercises.length,
+        completedExercises: dayData.exercises.filter(ex => ex.sets.length > 0 && ex.sets.every(s => s.completed)).length,
+        totalSets: dayData.exercises.reduce((s, ex) => s + ex.sets.length, 0),
+        completedSets: dayData.exercises.reduce((s, ex) => s + ex.sets.filter(st => st.completed).length, 0),
+        exercises, isToday, isPast, isFuture,
+      };
+    });
+
+    const weekStart = monday.toISOString().split('T')[0];
+    const sun = new Date(monday); sun.setDate(sun.getDate() + 6);
+    res.json({ weekNumber: latestWeek.weekNumber, weekStart, weekEnd: sun.toISOString().split('T')[0], days });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
