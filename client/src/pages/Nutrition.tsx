@@ -113,7 +113,7 @@ export default function Nutrition() {
       setProtein(String(data.proteinG));
       setCarbs(String(data.carbsG));
       setFat(String(data.fatG));
-    } catch { showToast('Failed to estimate macros'); }
+    } catch (err: any) { showToast(err.response?.data?.error || 'Failed to estimate macros'); }
     setEstimating(false);
   };
 

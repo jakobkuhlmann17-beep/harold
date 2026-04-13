@@ -43,19 +43,25 @@ Confidence levels:
     });
 
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+    console.log('Claude macro response:', responseText.slice(0, 200));
+    const clean = responseText.replace(/```json\s*|```\s*/g, '').trim();
     let parsed: any;
     try {
-      parsed = JSON.parse(responseText);
+      parsed = JSON.parse(clean);
     } catch {
-      const match = responseText.match(/\{[\s\S]*\}/);
-      if (match) parsed = JSON.parse(match[0]);
-      else return res.status(500).json({ error: 'Failed to parse Claude response' });
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) {
+        try { parsed = JSON.parse(match[0]); }
+        catch { return res.status(500).json({ error: 'Failed to parse AI response. Please try again.' }); }
+      } else {
+        return res.status(500).json({ error: 'Failed to parse AI response. Please try again.' });
+      }
     }
 
     res.json(parsed);
   } catch (err: any) {
-    console.error('Estimate macros error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('Estimate macros error:', err?.message || err);
+    res.status(500).json({ error: `AI estimation failed: ${err?.message || 'Unknown error'}` });
   }
 });
 
@@ -108,14 +114,20 @@ Respond ONLY with valid JSON, no markdown, no explanation:
     });
 
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+    console.log('Claude photo response:', responseText.slice(0, 200));
+    const clean = responseText.replace(/```json\s*|```\s*/g, '').trim();
     let parsed: any;
-    try { parsed = JSON.parse(responseText); }
-    catch { const match = responseText.match(/\{[\s\S]*\}/); if (match) parsed = JSON.parse(match[0]); else return res.status(500).json({ error: 'Could not identify food in this photo. Try a clearer photo or use manual entry.' }); }
+    try { parsed = JSON.parse(clean); }
+    catch {
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) { try { parsed = JSON.parse(match[0]); } catch { return res.status(500).json({ error: 'Could not parse food analysis. Try a clearer photo or use manual entry.' }); } }
+      else return res.status(500).json({ error: 'Could not identify food in this photo. Try a clearer photo or use manual entry.' });
+    }
 
     res.json(parsed);
   } catch (err: any) {
-    console.error('Photo estimate error:', err);
-    res.status(500).json({ error: 'Something went wrong analysing the photo. Please try again or use manual entry.' });
+    console.error('Photo estimate error:', err?.message || err);
+    res.status(500).json({ error: `Photo analysis failed: ${err?.message || 'Unknown error'}` });
   }
 });
 
