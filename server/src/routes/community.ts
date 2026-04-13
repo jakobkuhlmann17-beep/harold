@@ -13,7 +13,11 @@ router.get('/posts', async (req: AuthRequest, res: Response) => {
     if (filter === 'following') {
       const follows = await prisma.follow.findMany({ where: { followerId: req.userId }, select: { followingId: true } });
       const followingIds = follows.map((f) => f.followingId);
-      followingIds.push(req.userId!); // include own posts
+      if (followingIds.length === 0) {
+        // User follows nobody — return empty array
+        return res.json([]);
+      }
+      followingIds.push(req.userId!); // include own posts alongside followed users
       userFilter = { userId: { in: followingIds } };
     }
 

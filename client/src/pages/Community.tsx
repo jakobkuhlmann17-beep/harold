@@ -146,10 +146,22 @@ export default function Community() {
             ))}
           </div>
 
-          {posts.length === 0 && (
+          {posts.length === 0 && feedTab === 'foryou' && (
             <div className="bg-surface-container-lowest rounded-2xl p-10 text-center shadow-sm">
               <span className="material-symbols-outlined text-5xl text-outline-variant mb-3">forum</span>
-              <p className="text-on-surface-variant font-body">{feedTab === 'following' ? 'Follow users to see their posts here' : 'Be the first to post!'}</p>
+              <p className="text-on-surface-variant font-body">Be the first to post!</p>
+            </div>
+          )}
+
+          {posts.length === 0 && feedTab === 'following' && (
+            <div className="bg-surface-container-low rounded-3xl p-12 text-center">
+              <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40 mb-3">group</span>
+              <p className="font-headline font-bold text-xl text-on-surface-variant">You're not following anyone yet</p>
+              <p className="text-sm text-on-surface-variant mt-2 max-w-sm mx-auto">Search for friends above and follow them to see their workouts and posts here</p>
+              <button onClick={() => { const el = document.querySelector<HTMLInputElement>('[placeholder="Search users..."]'); el?.focus(); }}
+                className="hearth-glow text-white rounded-full px-6 py-3 font-headline font-bold mt-6 inline-flex items-center gap-2 hover:opacity-90 transition-opacity">
+                Find people to follow <span className="material-symbols-outlined text-[16px]">north_east</span>
+              </button>
             </div>
           )}
 
