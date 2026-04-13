@@ -36,9 +36,14 @@ export default function Workout() {
   const [toast, setToast] = useState<string | null>(null);
   const showToast = useCallback((msg: string) => setToast(msg), []);
 
-  const fetchWeeks = async () => { const { data } = await api.get('/weeks'); setWeeks(data); if (data.length > 0) setWeekIdx(data.length - 1); setLoading(false); };
+  const fetchWeeks = async (jumpToLatest = false) => {
+    const { data } = await api.get('/weeks');
+    setWeeks(data);
+    if (jumpToLatest && data.length > 0) setWeekIdx(data.length - 1);
+    setLoading(false);
+  };
   useEffect(() => {
-    fetchWeeks();
+    fetchWeeks(true);
     api.get('/exercises/history').then(({ data }) => setExerciseHistory(data)).catch(() => {});
   }, []);
 
@@ -392,11 +397,11 @@ function WorkoutContent({ currentDay, newExName, setNewExName, addExercise, dele
                 <div className="col-span-3"><div className="bg-surface-container-low rounded-lg p-2"><span className="text-[9px] font-label uppercase tracking-widest text-on-surface-variant">REPS</span><EditableNumber value={s.reps} onSave={(v) => updateSet(s.id, 'reps', v)} /></div></div>
                 <div className="col-span-3">{s.notes && <span className="text-[10px] text-outline font-body italic truncate block">{s.notes}</span>}<FeedbackInput value={s.feedback} onSave={(v) => updateSet(s.id, 'feedback', v)} /></div>
                 <div className="col-span-2 flex items-center justify-end gap-1">
-                  <button onClick={() => updateSet(s.id, 'completed', !s.completed)}
+                  <button onClick={(e) => { e.stopPropagation(); updateSet(s.id, 'completed', !s.completed); }}
                     className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${s.completed ? 'bg-secondary-container border-secondary-container text-on-secondary-container' : 'border-outline-variant text-transparent hover:border-secondary'}`}>
                     <span className="material-symbols-outlined text-[18px]">check</span>
                   </button>
-                  <button onClick={() => deleteSet(s.id)} className="text-outline-variant hover:text-error transition-colors"><span className="material-symbols-outlined text-[16px]">close</span></button>
+                  <button onClick={(e) => { e.stopPropagation(); deleteSet(s.id); }} className="text-outline-variant hover:text-error transition-colors"><span className="material-symbols-outlined text-[16px]">close</span></button>
                 </div>
               </div>
             ))}
@@ -552,11 +557,13 @@ function EditableText({ value, onSave, className }: { value: string; onSave: (v:
   const [text, setText] = useState(value);
   if (editing) {
     return <input value={text} onChange={(e) => setText(e.target.value)}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       onBlur={() => { onSave(text); setEditing(false); }}
       onKeyDown={(e) => { if (e.key === 'Enter') { onSave(text); setEditing(false); } }}
       autoFocus className="border-b-2 border-primary outline-none px-1 text-lg font-headline font-bold bg-transparent text-on-surface" />;
   }
-  return <span onClick={() => setEditing(true)} className={`cursor-pointer hover:text-primary transition-colors ${className}`}>{value}</span>;
+  return <span onClick={(e) => { e.stopPropagation(); setEditing(true); }} className={`cursor-pointer hover:text-primary transition-colors ${className}`}>{value}</span>;
 }
 
 function EditableNumber({ value, onSave, decimal }: { value: number | null; onSave: (v: number | null) => void; decimal?: boolean }) {
@@ -564,12 +571,14 @@ function EditableNumber({ value, onSave, decimal }: { value: number | null; onSa
   const [text, setText] = useState(value?.toString() ?? '');
   if (editing) {
     return <input value={text} onChange={(e) => setText(e.target.value)} type="number" step={decimal ? '0.5' : '1'}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       onBlur={() => { onSave(text === '' ? null : decimal ? parseFloat(text) : parseInt(text)); setEditing(false); }}
       onKeyDown={(e) => { if (e.key === 'Enter') { onSave(text === '' ? null : decimal ? parseFloat(text) : parseInt(text)); setEditing(false); } }}
       autoFocus className="w-full border-b-2 border-primary outline-none text-lg font-headline font-bold bg-transparent text-on-surface" />;
   }
   return (
-    <span onClick={() => { setText(value?.toString() ?? ''); setEditing(true); }}
+    <span onClick={(e) => { e.stopPropagation(); setText(value?.toString() ?? ''); setEditing(true); }}
       className="cursor-pointer hover:text-primary text-lg font-headline font-bold transition-colors block">
       {value !== null && value !== undefined ? value : '\u2014'}
     </span>
@@ -582,12 +591,14 @@ function FeedbackInput({ value, onSave }: { value: string | null; onSave: (v: st
   const save = () => { onSave(text.trim() || null); setEditing(false); };
   if (editing) {
     return <input value={text} onChange={(e) => setText(e.target.value)} onBlur={save}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
       placeholder="How did it feel?"
       autoFocus className="w-full border-b border-outline-variant outline-none text-[11px] text-on-surface-variant font-body bg-transparent italic" />;
   }
   return (
-    <span onClick={() => { setText(value ?? ''); setEditing(true); }}
+    <span onClick={(e) => { e.stopPropagation(); setText(value ?? ''); setEditing(true); }}
       className="cursor-pointer text-[11px] text-outline italic hover:text-primary font-body transition-colors">
       {value || 'feedback'}
     </span>
