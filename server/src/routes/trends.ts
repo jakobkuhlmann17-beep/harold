@@ -26,6 +26,33 @@ router.get('/strength', async (req: AuthRequest, res: Response) => {
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// GET /api/trends/workout-completion
+router.get('/workout-completion', async (req: AuthRequest, res: Response) => {
+  try {
+    const weeks = await getUserWeeks(req.userId);
+    const dayOrder: Record<string, number> = { MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6, SUNDAY: 7 };
+    const dayShort: Record<string, string> = { MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed', THURSDAY: 'Thu', FRIDAY: 'Fri', SATURDAY: 'Sat', SUNDAY: 'Sun' };
+
+    const result: any[] = [];
+    for (const w of weeks) {
+      for (const d of w.days.sort((a, b) => (dayOrder[a.dayOfWeek] || 0) - (dayOrder[b.dayOfWeek] || 0))) {
+        if (d.exercises.length === 0) continue;
+        const totalExercises = d.exercises.length;
+        const completedExercises = d.exercises.filter(ex => ex.sets.length > 0 && ex.sets.every(s => s.completed)).length;
+        const totalSets = d.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
+        const completedSets = d.exercises.reduce((sum, ex) => sum + ex.sets.filter(s => s.completed).length, 0);
+        result.push({
+          weekNumber: w.weekNumber, dayOfWeek: d.dayOfWeek, focus: d.focus,
+          label: `${dayShort[d.dayOfWeek] || d.dayOfWeek} W${w.weekNumber}`,
+          totalExercises, completedExercises, totalSets, completedSets,
+        });
+      }
+    }
+
+    res.json(result.slice(-30));
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 // GET /api/trends/exercise-progress?exercise=Barbells
 router.get('/exercise-progress', async (req: AuthRequest, res: Response) => {
   try {

@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react';
 import api from '../lib/api';
 
-interface StrengthPoint { week: number; weekLabel: string; maxWeight: number; }
-interface ExProgress { week: number; weekLabel: string; maxWeightKg: number; totalVolume: number; bestSet: string; }
+interface CompletionDay { weekNumber: number; dayOfWeek: string; focus: string; label: string; totalExercises: number; completedExercises: number; totalSets: number; completedSets: number; }
 interface ConsistencyDay { date: string; count: number; }
 interface Record_ { exercise: string; maxWeightKg: number; maxReps: number; achievedAt: string; }
 interface Milestone { title: string; description: string; achieved: boolean; achievedAt: string | null; progress: string | null; }
 interface Insights { strongestExercise: { name: string; totalVolumeGain: number }; mostConsistentDay: string; avgCompletionRate: number; currentStreak: number; longestStreak: number; totalSetsAllTime: number; totalVolumeAllTime: number; weekOverWeekVolumeChange: number; recommendedFocus: string; }
 
 export default function Trends() {
-  const [strength, setStrength] = useState<StrengthPoint[]>([]);
-  const [exProgress, setExProgress] = useState<ExProgress[]>([]);
-  const [selectedEx, setSelectedEx] = useState<string | null>(null);
+  const [completion, setCompletion] = useState<CompletionDay[]>([]);
   const [consistency, setConsistency] = useState<ConsistencyDay[]>([]);
   const [records, setRecords] = useState<Record_[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
@@ -20,21 +17,13 @@ export default function Trends() {
 
   useEffect(() => {
     Promise.all([
-      api.get('/trends/strength'), api.get('/trends/consistency'),
+      api.get('/trends/workout-completion'), api.get('/trends/consistency'),
       api.get('/trends/records'), api.get('/trends/milestones'), api.get('/trends/insights'),
-    ]).then(([s, c, r, m, ins]) => {
-      setStrength(s.data); setConsistency(c.data); setRecords(r.data); setMilestones(m.data); setInsights(ins.data);
+    ]).then(([wc, c, r, m, ins]) => {
+      setCompletion(wc.data); setConsistency(c.data); setRecords(r.data); setMilestones(m.data); setInsights(ins.data);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
-
-  const loadExercise = async (name: string) => {
-    setSelectedEx(name);
-    const { data } = await api.get(`/trends/exercise-progress?exercise=${encodeURIComponent(name)}`);
-    setExProgress(data);
-  };
-
-  const chartData = selectedEx ? exProgress.map(e => ({ week: e.week, weekLabel: e.weekLabel, maxWeight: e.maxWeightKg })) : strength;
 
   // Volume data for weight progress
   const weeklyVolume = computeWeeklyVolume(consistency);
@@ -45,8 +34,8 @@ export default function Trends() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="uppercase tracking-widest text-xs font-bold text-tertiary font-label">Performance Insight</p>
-        <h2 className="font-headline text-3xl lg:text-4xl font-black text-on-surface">Your Kinetic Journey</h2>
+        <p className="uppercase tracking-widest text-xs font-bold text-tertiary font-label">Training Overview</p>
+        <h2 className="font-headline text-3xl lg:text-4xl font-black text-on-surface">Your Workout Journey</h2>
       </div>
 
       {/* Insights bar */}
@@ -68,27 +57,46 @@ export default function Trends() {
         </div>
       )}
 
-      {/* Strength + Records */}
+      {/* Workout Completion + Records */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-7 bg-surface-container-lowest rounded-3xl p-6 lg:p-8 shadow-sm">
-          <h3 className="font-headline text-2xl font-bold text-on-surface">Strength Gains</h3>
-          <p className="text-sm text-on-surface-variant font-body mb-4">{selectedEx ? `${selectedEx} — week by week` : 'Max weight lifted per week'}</p>
-          {/* Exercise pills */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mb-4">
-            <button onClick={() => { setSelectedEx(null); setExProgress([]); }}
-              className={`flex-shrink-0 rounded-full px-4 py-1.5 text-xs font-headline font-bold transition-all ${!selectedEx ? 'hearth-glow text-white' : 'bg-surface-container-low border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container-high'}`}>
-              All Exercises
-            </button>
-            {records.slice(0, 6).map(r => (
-              <button key={r.exercise} onClick={() => loadExercise(r.exercise)}
-                className={`flex-shrink-0 rounded-full px-4 py-1.5 text-xs font-headline font-bold transition-all ${selectedEx === r.exercise ? 'hearth-glow text-white' : 'bg-surface-container-low border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container-high'}`}>
-                {r.exercise}
-              </button>
-            ))}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-headline text-2xl font-bold text-on-surface">Workout Completion</h3>
+              <p className="text-sm text-on-surface-variant font-body">Exercises completed per session</p>
+            </div>
+            <div className="flex items-center gap-3 text-xs font-body text-on-surface-variant">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: '#f26d21' }} /> Completed</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-surface-container-highest" /> Incomplete</span>
+            </div>
           </div>
-          {chartData.length > 0 ? <StrengthChart data={chartData} /> : (
-            <div className="h-48 flex items-center justify-center"><p className="text-on-surface-variant font-body italic">Start logging workouts to see your strength trend</p></div>
+          {completion.length > 0 ? <CompletionChart data={completion} /> : (
+            <div className="h-48 flex items-center justify-center"><p className="text-on-surface-variant font-body italic">Start logging workouts to see your completion chart</p></div>
           )}
+          {/* Summary row */}
+          {completion.length > 0 && (() => {
+            const avgCompletion = Math.round(completion.reduce((s, d) => s + (d.totalExercises > 0 ? d.completedExercises / d.totalExercises : 0), 0) / completion.length * 100);
+            const last = completion[completion.length - 1];
+            // Best streak of consecutive days with all exercises complete
+            let bestStreak = 0; let cur = 0;
+            for (const d of completion) { if (d.completedExercises === d.totalExercises) { cur++; bestStreak = Math.max(bestStreak, cur); } else cur = 0; }
+            return (
+              <div className="flex gap-3 mt-4 flex-wrap">
+                <div className="bg-surface-container-low rounded-2xl px-5 py-3 flex items-center gap-3">
+                  <span className="material-symbols-outlined text-primary text-[20px]">percent</span>
+                  <div><span className="font-headline font-bold text-lg">{avgCompletion}%</span><span className="text-xs text-on-surface-variant font-body ml-1">avg completion</span></div>
+                </div>
+                <div className="bg-surface-container-low rounded-2xl px-5 py-3 flex items-center gap-3">
+                  <span className="material-symbols-outlined text-primary text-[20px]">local_fire_department</span>
+                  <div><span className="font-headline font-bold text-lg">{bestStreak}</span><span className="text-xs text-on-surface-variant font-body ml-1">best streak</span></div>
+                </div>
+                <div className="bg-surface-container-low rounded-2xl px-5 py-3 flex items-center gap-3">
+                  <span className="material-symbols-outlined text-primary text-[20px]">fitness_center</span>
+                  <div><span className="font-headline font-bold text-lg">{last.completedSets}/{last.totalSets}</span><span className="text-xs text-on-surface-variant font-body ml-1">last session</span></div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
         <div className="lg:col-span-5 space-y-3">
           <h3 className="font-headline text-2xl font-bold text-on-surface">Personal Records</h3>
@@ -207,29 +215,64 @@ function InsightCard({ icon, value, label, color, ringPct }: { icon: string; val
   );
 }
 
-function StrengthChart({ data }: { data: { week: number; weekLabel: string; maxWeight: number }[] }) {
-  const W = 600; const H = 200; const PAD = { t: 20, r: 20, b: 30, l: 40 };
+function CompletionChart({ data }: { data: CompletionDay[] }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const W = 700; const H = 280; const PAD = { t: 10, r: 10, b: 30, l: 10 };
   const cw = W - PAD.l - PAD.r; const ch = H - PAD.t - PAD.b;
-  const maxW = Math.max(...data.map(d => d.maxWeight), 1);
-  const minW = Math.min(...data.map(d => d.maxWeight));
-  const range = maxW - minW || 1;
-  const points = data.map((d, i) => ({ x: PAD.l + (i / Math.max(data.length - 1, 1)) * cw, y: PAD.t + ch - ((d.maxWeight - minW) / range) * ch, ...d }));
-  const polyline = points.map(p => `${p.x},${p.y}`).join(' ');
-  const peakIdx = points.reduce((best, p, i) => p.maxWeight > points[best].maxWeight ? i : best, 0);
-  const peak = points[peakIdx];
-  const areaPath = `M${points[0].x},${PAD.t + ch} ${points.map(p => `L${p.x},${p.y}`).join(' ')} L${points[points.length - 1].x},${PAD.t + ch} Z`;
+  const maxEx = Math.max(...data.map(d => d.totalExercises), 1);
+  const gap = 8;
+  const barW = Math.max(8, (cw - gap * data.length) / data.length);
+  const blockGap = 2;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
-      <defs><linearGradient id="sGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a14000" stopOpacity="0.1" /><stop offset="100%" stopColor="#a14000" stopOpacity="0" /></linearGradient></defs>
-      {[0, 0.25, 0.5, 0.75, 1].map(f => <line key={f} x1={PAD.l} y1={PAD.t + ch * (1 - f)} x2={PAD.l + cw} y2={PAD.t + ch * (1 - f)} stroke="#e0c0b2" strokeOpacity="0.2" strokeWidth="1" />)}
-      <path d={areaPath} fill="url(#sGrad)" />
-      <polyline points={polyline} fill="none" stroke="#a14000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={i === peakIdx ? 5 : 3} fill={i === peakIdx ? '#f26d21' : '#a14000'} />)}
-      <rect x={peak.x - 22} y={peak.y - 28} width="44" height="20" rx="10" fill="#a14000" />
-      <text x={peak.x} y={peak.y - 15} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Lexend">{peak.maxWeight}kg</text>
-      {points.map((p, i) => <text key={i} x={p.x} y={H - 5} textAnchor="middle" fill="#8c7166" fontSize="9" fontFamily="Manrope">{data.length <= 6 ? p.weekLabel : `W${p.week}`}</text>)}
-    </svg>
+    <div className="relative">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" onMouseLeave={() => setHoveredIdx(null)}>
+        {data.map((d, i) => {
+          const x = PAD.l + i * (barW + gap);
+          const blockH = (ch - blockGap * (maxEx - 1)) / maxEx;
+          const blocks = [];
+          for (let b = 0; b < d.totalExercises; b++) {
+            const isComplete = b < d.completedExercises;
+            const y = PAD.t + ch - (b + 1) * blockH - b * blockGap;
+            blocks.push(
+              <rect key={b} x={x} y={y} width={barW} height={blockH} rx={3}
+                fill={isComplete ? '#f26d21' : '#e4e2e1'} />
+            );
+          }
+          const showLabel = data.length <= 20 || i % 2 === 0;
+          return (
+            <g key={i} onMouseEnter={() => setHoveredIdx(i)} style={{ cursor: 'pointer' }}>
+              {/* Invisible hit area */}
+              <rect x={x} y={PAD.t} width={barW} height={ch} fill="transparent" />
+              {blocks}
+              {showLabel && (
+                <text x={x + barW / 2} y={H - 5} textAnchor="middle" fill="#8c7166" fontSize="8" fontFamily="Manrope">
+                  {data.length > 14 ? d.label.split(' ')[0] : d.label}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      {/* Tooltip */}
+      {hoveredIdx !== null && (() => {
+        const d = data[hoveredIdx];
+        const leftPct = ((hoveredIdx + 0.5) / data.length) * 100;
+        return (
+          <div className="absolute pointer-events-none bg-[#1b1c1c] text-white rounded-xl px-4 py-3 text-xs font-body z-10"
+            style={{ left: `${Math.min(80, Math.max(10, leftPct))}%`, top: 0, transform: 'translateX(-50%)' }}>
+            <p className="font-headline font-bold">{d.dayOfWeek.charAt(0) + d.dayOfWeek.slice(1).toLowerCase()} {d.focus ? `\u2014 ${d.focus}` : ''} <span className="opacity-60">Week {d.weekNumber}</span></p>
+            <div className="flex items-center gap-1 mt-1">
+              {Array.from({ length: d.totalExercises }).map((_, i) => (
+                <span key={i} className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: i < d.completedExercises ? '#f26d21' : '#555' }} />
+              ))}
+              <span className="ml-1">{d.completedExercises}/{d.totalExercises} exercises</span>
+            </div>
+            <p className="mt-0.5 opacity-70">{d.completedSets}/{d.totalSets} sets completed</p>
+          </div>
+        );
+      })()}
+    </div>
   );
 }
 
