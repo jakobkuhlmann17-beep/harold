@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 
 const NAV_ITEMS = [
@@ -20,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
 export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const pageTitle = PAGE_TITLES[location.pathname] || 'Harold';
 
   return (
@@ -54,10 +55,10 @@ export default function Layout() {
 
         {/* Bottom section */}
         <div className="p-4 space-y-3">
-          <NavLink to="/workout" className="hearth-glow text-on-primary rounded-full py-3 px-6 text-sm font-headline font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+          <button onClick={() => navigate('/workout?start=true')} className="hearth-glow text-on-primary rounded-full py-3 px-6 text-sm font-headline font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity w-full">
             <span className="material-symbols-outlined text-[20px]">play_arrow</span>
             Start Workout
-          </NavLink>
+          </button>
           <div className="flex items-center justify-between px-2 pt-2 border-t border-outline-variant/20">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full hearth-glow flex items-center justify-center text-on-primary text-xs font-bold font-headline">

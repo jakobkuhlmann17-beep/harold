@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import ExerciseAutocomplete from '../components/ExerciseAutocomplete';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -73,6 +73,8 @@ export default function Workout() {
   const [toast, setToast] = useState<string | null>(null);
   const showToast = useCallback((msg: string) => setToast(msg), []);
   const isMobile = useIsMobile();
+  const [searchParams] = useSearchParams();
+  const nav = useNavigate();
 
   // Session state
   const [sessionActive, setSessionActive] = useState(false);
@@ -91,6 +93,15 @@ export default function Workout() {
   const [qlKg, setQlKg] = useState('');
   const [qlReps, setQlReps] = useState('');
   const [qlFeedback, setQlFeedback] = useState('');
+
+  // Auto-start session from sidebar button
+  useEffect(() => {
+    if (searchParams.get('start') === 'true') {
+      setSessionActive(true);
+      setSessionSeconds(0);
+      nav('/workout', { replace: true });
+    }
+  }, [searchParams, nav]);
 
   // Session timer effect
   useEffect(() => {
