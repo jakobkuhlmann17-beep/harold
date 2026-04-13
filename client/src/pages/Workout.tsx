@@ -650,34 +650,53 @@ export default function Workout() {
       )}
 
       {/* End Session Summary */}
-      {showEndModal && currentWeek && (() => {
-        const allSets = currentWeek.days.flatMap(d => d.exercises.flatMap(e => e.sets));
-        const done = allSets.filter(s => s.completed).length;
-        const total = allSets.length;
-        const volume = allSets.reduce((sum, s) => sum + (s.completed && s.reps && s.weightKg ? s.reps * s.weightKg : 0), 0);
+      {showEndModal && currentDay && (() => {
+        const dayExercises = currentDay.exercises.filter((ex: ExerciseData) => ex.sets.length > 0);
+        const daySets = currentDay.exercises.flatMap((e: ExerciseData) => e.sets);
+        const done = daySets.filter((s: SetData) => s.completed).length;
+        const total = daySets.length;
+        const volume = daySets.reduce((sum: number, s: SetData) => sum + (s.completed && s.reps && s.weightKg ? s.reps * s.weightKg : 0), 0);
+        const allComplete = total > 0 && done === total;
+        const remaining = total - done;
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => setShowEndModal(false)}>
             <div className="bg-surface-container-lowest rounded-3xl max-w-md w-full mx-4 p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <h3 className="font-headline text-2xl font-black text-center text-on-surface mb-6">Workout Complete! \ud83d\udd25</h3>
+              <h3 className="font-headline text-2xl font-black text-center text-on-surface mb-4">Workout Complete! \ud83d\udd25</h3>
+
+              {/* Completion banner */}
+              {allComplete ? (
+                <div className="bg-green-50 rounded-xl p-3 text-center text-green-800 font-headline font-bold mb-4">All sets complete! Great session \ud83d\udd25</div>
+              ) : remaining > 0 && (
+                <div className="bg-secondary-container rounded-xl p-3 text-center text-on-secondary-container font-body text-sm mb-4">{remaining} sets remaining \u2014 mark them complete before finishing</div>
+              )}
+
+              {/* Stats — current day only */}
               <div className="grid grid-cols-3 gap-3 mb-6">
                 <div className="text-center"><p className="font-headline text-2xl font-black text-primary">{fmtTime(sessionSeconds)}</p><p className="text-[10px] uppercase text-on-surface-variant font-bold tracking-widest">Duration</p></div>
                 <div className="text-center"><p className="font-headline text-2xl font-black text-on-surface">{done}/{total}</p><p className="text-[10px] uppercase text-on-surface-variant font-bold tracking-widest">Sets Done</p></div>
                 <div className="text-center"><p className="font-headline text-2xl font-black text-tertiary">{volume >= 1000 ? `${(volume / 1000).toFixed(1)}k` : volume}kg</p><p className="text-[10px] uppercase text-on-surface-variant font-bold tracking-widest">Volume</p></div>
               </div>
-              <div className="space-y-2 mb-6">
-                <p className="text-xs font-label uppercase tracking-widest text-on-surface-variant">Exercises completed</p>
-                {currentWeek.days.filter(d => d.activityType === 'WORKOUT').flatMap(d => d.exercises).filter(ex => ex.sets.length > 0).map(ex => {
-                  const exDone = ex.sets.filter(s => s.completed).length;
+
+              {/* Exercise list — current day only */}
+              <p className="text-xs font-label uppercase tracking-widest text-on-surface-variant mb-2">Today's exercises</p>
+              <div className="space-y-2 mb-6 max-h-64 overflow-y-auto">
+                {dayExercises.map((ex: ExerciseData) => {
+                  const exDone = ex.sets.filter((s: SetData) => s.completed).length;
                   const exTotal = ex.sets.length;
+                  const full = exDone === exTotal;
+                  const partial = exDone > 0 && exDone < exTotal;
                   return (
                     <div key={ex.id} className="flex items-center gap-2 text-sm">
-                      <span className={`material-symbols-outlined text-[16px] ${exDone === exTotal ? 'text-[#2e7d32]' : 'text-outline-variant'}`}>{exDone === exTotal ? 'check_circle' : 'radio_button_unchecked'}</span>
-                      <span className="font-body text-on-surface flex-1">{ex.name}</span>
-                      <span className="text-xs text-on-surface-variant font-label">{exDone}/{exTotal} sets</span>
+                      <span className={`material-symbols-outlined text-[16px] ${full ? 'text-[#2e7d32]' : partial ? 'text-secondary' : 'text-outline-variant'}`}>
+                        {full ? 'check_circle' : partial ? 'pending' : 'radio_button_unchecked'}
+                      </span>
+                      <span className={`flex-1 ${full ? 'font-bold text-on-surface' : 'text-on-surface-variant'}`}>{ex.name}</span>
+                      <span className={`text-xs font-label ${full ? 'text-[#2e7d32] font-bold' : partial ? 'text-secondary font-bold' : 'text-on-surface-variant'}`}>{exDone}/{exTotal} sets</span>
                     </div>
                   );
                 })}
               </div>
+
               <div className="flex gap-3">
                 <button onClick={() => { confirmEndSession(); setShareOpen(true); setShareDay(currentDay?.dayOfWeek || null); setShareMode('day'); }}
                   className="hearth-glow text-white rounded-full px-6 py-3 text-sm font-headline font-bold flex-1 hover:opacity-90">Share as Pulse</button>
