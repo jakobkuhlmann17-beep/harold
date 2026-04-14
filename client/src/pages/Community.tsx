@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import api from '../lib/api';
 import { timeAgo } from '../utils/timeAgo';
@@ -14,6 +14,7 @@ const CATEGORIES = ['Morning Grit', 'Fueling', 'Strength Focus', 'Recovery'];
 
 export default function Community() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<PostData[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,14 +193,16 @@ export default function Community() {
             {searchOpen && searchResults.length > 0 && (
               <div className="absolute z-50 w-full mt-1 bg-surface-container-lowest rounded-xl border border-outline-variant/40 shadow-lg overflow-hidden">
                 {searchResults.map((u) => (
-                  <div key={u.id} className="px-4 py-3 flex items-center gap-3 hover:bg-surface-container-low transition-colors border-b border-outline-variant/20 last:border-0">
-                    <div className="w-8 h-8 rounded-full hearth-glow flex items-center justify-center text-white text-xs font-bold font-headline">{u.username.charAt(0).toUpperCase()}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-headline font-bold text-sm text-on-surface truncate">{u.username}</p>
-                      <p className="text-[10px] text-on-surface-variant font-label">{u.followerCount} followers</p>
+                  <div key={u.id} className="px-4 py-3 flex items-center gap-3 border-b border-outline-variant/20 last:border-0">
+                    <div onClick={() => { setSearchOpen(false); navigate(`/profile/${u.username}`); }} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity">
+                      <div className="w-8 h-8 rounded-full hearth-glow flex items-center justify-center text-white text-xs font-bold font-headline flex-shrink-0">{u.username.charAt(0).toUpperCase()}</div>
+                      <div className="min-w-0">
+                        <p className="font-headline font-bold text-sm text-on-surface truncate">{u.username}</p>
+                        <p className="text-[10px] text-on-surface-variant font-label">{u.followerCount} followers</p>
+                      </div>
                     </div>
                     <button onClick={() => toggleFollow(u.id, u.isFollowedByMe)}
-                      className={`rounded-full px-4 py-1.5 text-xs font-headline font-bold transition-all ${u.isFollowedByMe ? 'bg-surface-container-high text-on-surface-variant' : 'hearth-glow text-white'}`}>
+                      className={`rounded-full px-4 py-1.5 text-xs font-headline font-bold transition-all flex-shrink-0 ${u.isFollowedByMe ? 'bg-surface-container-high text-on-surface-variant' : 'hearth-glow text-white'}`}>
                       {u.isFollowedByMe ? 'Unfollow' : 'Follow'}
                     </button>
                   </div>
@@ -219,7 +222,7 @@ export default function Community() {
                 <div key={r.rank} className={`flex items-center gap-3 p-2 rounded-xl transition-colors ${r.isCurrentUser ? 'bg-primary-fixed/30' : ''}`}>
                   <span className="font-headline font-bold text-sm text-outline w-6 text-center">{r.rank}</span>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold font-headline ${r.rank === 1 ? 'hearth-glow text-on-primary' : 'bg-surface-container-high text-on-surface-variant'}`}>{r.username.charAt(0).toUpperCase()}</div>
-                  <div className="flex-1 min-w-0"><p className="font-headline font-bold text-sm text-on-surface truncate">{r.username}</p><p className="text-[10px] font-label text-on-surface-variant">{r.totalSets} Heat Pts</p></div>
+                  <div onClick={() => navigate(`/profile/${r.username}`)} className="flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"><p className="font-headline font-bold text-sm text-on-surface truncate hover:text-primary">{r.username}</p><p className="text-[10px] font-label text-on-surface-variant">{r.totalSets} Heat Pts</p></div>
                   {r.rank === 1 && <span className="material-symbols-outlined filled text-secondary text-[20px]">emoji_events</span>}
                   {r.rank <= 3 && r.rank > 1 && <span className="material-symbols-outlined text-primary text-[18px]">trending_up</span>}
                 </div>
@@ -258,6 +261,7 @@ export default function Community() {
 function PostCard({ post, currentUserId, onLike, onDelete, onViewWorkout, onViewCardio }: {
   post: PostData; currentUserId: number; onLike: () => void; onDelete: () => void; onViewWorkout?: () => void; onViewCardio?: () => void;
 }) {
+  const nav = useNavigate();
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -272,7 +276,7 @@ function PostCard({ post, currentUserId, onLike, onDelete, onViewWorkout, onView
   return (
     <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant text-sm font-bold font-headline flex-shrink-0">{post.user.username.charAt(0).toUpperCase()}</div>
+        <div onClick={() => nav(`/profile/${post.user.username}`)} className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant text-sm font-bold font-headline flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">{post.user.username.charAt(0).toUpperCase()}</div>
         <div className="flex-1 min-w-0"><Link to={`/profile/${post.user.username}`} className="font-headline font-bold text-sm text-on-surface hover:text-primary transition-colors">{post.user.username}</Link><p className="text-[11px] text-outline font-label">{timeAgo(post.createdAt)}</p></div>
         {post.category && <span className="bg-primary-fixed text-primary text-[10px] rounded-full px-2.5 py-1 font-label font-bold uppercase tracking-wider">{post.category}</span>}
         {isOwn && (
@@ -335,8 +339,8 @@ function PostCard({ post, currentUserId, onLike, onDelete, onViewWorkout, onView
             <>
               {comments.map((c) => (
                 <div key={c.id} className="flex gap-2">
-                  <div className="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-[10px] font-bold font-headline text-on-surface-variant flex-shrink-0">{c.user.username.charAt(0).toUpperCase()}</div>
-                  <div className="bg-surface-container-low rounded-xl px-3 py-2 flex-1"><span className="font-headline font-bold text-xs text-on-surface">{c.user.username}</span><span className="text-xs text-outline font-label ml-2">{timeAgo(c.createdAt)}</span><p className="text-sm text-on-surface font-body mt-0.5">{c.content}</p></div>
+                  <div onClick={() => nav(`/profile/${c.user.username}`)} className="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-[10px] font-bold font-headline text-on-surface-variant flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">{c.user.username.charAt(0).toUpperCase()}</div>
+                  <div className="bg-surface-container-low rounded-xl px-3 py-2 flex-1"><span onClick={() => nav(`/profile/${c.user.username}`)} className="font-headline font-bold text-xs text-on-surface cursor-pointer hover:text-primary transition-colors">{c.user.username}</span><span className="text-xs text-outline font-label ml-2">{timeAgo(c.createdAt)}</span><p className="text-sm text-on-surface font-body mt-0.5">{c.content}</p></div>
                 </div>
               ))}
               <div className="flex gap-2">
