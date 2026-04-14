@@ -115,12 +115,58 @@ export default function Dashboard() {
         <div className="md:col-span-8 bg-surface-container-low p-6 lg:p-8 rounded-3xl relative overflow-hidden">
           <div className="absolute -top-12 -right-12 w-64 h-64 hearth-glow opacity-10 rounded-full blur-3xl pointer-events-none" />
           <p className="font-label text-sm uppercase tracking-widest text-primary mb-1 relative">Daily Summary</p>
-          <h2 className="font-headline text-3xl lg:text-4xl font-extrabold text-on-surface mb-6 relative">Welcome back, {user?.username}!</h2>
-          <div className="grid grid-cols-3 gap-4 relative">
+          <h2 className="font-headline text-3xl lg:text-4xl font-extrabold text-on-surface relative">Welcome back, {user?.username}!</h2>
+          <p className="text-sm text-on-surface-variant font-body mt-1 mb-4 relative">Today is {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+
+          <div className="grid grid-cols-3 gap-4 relative mb-4">
             <div><p className="font-headline text-3xl font-black text-primary">{calRemaining.toLocaleString()}</p><p className="text-sm text-on-surface-variant font-label mt-1">Calories Remaining</p></div>
             <div><p className="font-headline text-3xl font-black text-tertiary">{todayWorkout ? todayWorkout.completed : 0}</p><p className="text-sm text-on-surface-variant font-label mt-1">Sets Completed</p></div>
             <div><p className="font-headline text-3xl font-black text-secondary">{streak}</p><p className="text-sm text-on-surface-variant font-label mt-1">Day Streak</p></div>
           </div>
+
+          {/* Today's workout status card */}
+          {todayWorkout ? (
+            <div className={`rounded-2xl p-5 relative ${todayWorkout.completed === todayWorkout.total && todayWorkout.total > 0 ? 'bg-green-50 border border-green-200' : 'bg-primary-fixed/30 border border-primary-fixed'}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl hearth-glow flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-white text-[20px]">
+                    {todayWorkout.activityType === 'RUN' ? 'directions_run' : todayWorkout.activityType === 'CYCLING' ? 'directions_bike' : 'fitness_center'}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  {todayWorkout.activityType === 'WORKOUT' ? (
+                    <>
+                      <p className="font-headline font-bold text-lg text-on-surface capitalize">You have {todayWorkout.focus} scheduled today</p>
+                      <p className="text-sm text-on-surface-variant font-body">
+                        {todayWorkout.total === 0 ? 'No sets added yet' : todayWorkout.completed === 0 ? 'Not started yet' : todayWorkout.completed === todayWorkout.total ? 'All sets complete! Great work \ud83d\udd25' : `${todayWorkout.completed} / ${todayWorkout.total} sets completed`}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-headline font-bold text-lg text-on-surface">You have a {todayWorkout.activityType === 'RUN' ? 'Run' : 'Cycling'} session today</p>
+                      <p className="text-sm text-on-surface-variant font-body">
+                        {todayWorkout.cardio ? `${todayWorkout.cardio.distanceKm || '?'} km \u00b7 ${todayWorkout.cardio.durationMinutes || '?'} min` : 'Not started yet'}
+                      </p>
+                    </>
+                  )}
+                </div>
+                <Link to="/workout" className="hearth-glow text-white rounded-full px-5 py-2 text-sm font-headline font-bold hover:opacity-90 transition-opacity flex-shrink-0">Go to workout &rarr;</Link>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-surface-container-low rounded-2xl p-5 relative">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-on-surface-variant text-[20px]">self_improvement</span>
+                </div>
+                <div className="flex-1">
+                  <p className="font-headline font-bold text-lg text-on-surface-variant">Rest day today</p>
+                  <p className="text-sm text-on-surface-variant font-body">No workout scheduled &mdash; enjoy the recovery</p>
+                </div>
+                <Link to="/workout" className="border border-outline text-on-surface-variant rounded-full px-5 py-2 text-sm font-headline font-bold hover:bg-surface-container-high transition-colors flex-shrink-0">Add a session &rarr;</Link>
+              </div>
+            </div>
+          )}
         </div>
         <div className="md:col-span-4 bg-surface-container-lowest p-6 rounded-3xl">
           <div className="flex items-center gap-2 mb-3">

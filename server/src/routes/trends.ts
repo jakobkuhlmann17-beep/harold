@@ -19,7 +19,7 @@ router.get('/strength', async (req: AuthRequest, res: Response) => {
     const weeks = await getUserWeeks(req.userId);
     const result = weeks.slice(-12).map((w) => {
       let maxWeight = 0;
-      for (const d of w.days) for (const ex of d.exercises) for (const s of ex.sets) if (s.weightKg !== null && s.weightKg > maxWeight) maxWeight = s.weightKg;
+      for (const d of w.days) for (const ex of d.exercises) for (const s of ex.sets) if (s.completed && s.weightKg !== null && s.weightKg > maxWeight) maxWeight = s.weightKg;
       return { week: w.weekNumber, weekLabel: `Week ${w.weekNumber}`, maxWeight };
     });
     res.json(result);
@@ -68,6 +68,7 @@ router.get('/exercise-progress', async (req: AuthRequest, res: Response) => {
         for (const ex of d.exercises) {
           if (ex.name !== exerciseName) continue;
           for (const s of ex.sets) {
+            if (!s.completed) continue;
             const wt = s.weightKg ?? 0;
             const rp = s.reps ?? 0;
             totalVolume += rp * wt;
@@ -285,7 +286,7 @@ router.get('/records', async (req: AuthRequest, res: Response) => {
     const weeks = await getUserWeeks(req.userId);
     const records: Record<string, { exercise: string; maxWeightKg: number; maxReps: number; achievedAt: string }> = {};
     for (const w of weeks) for (const d of w.days) for (const ex of d.exercises) for (const s of ex.sets)
-      if (s.weightKg !== null && s.weightKg > 0 && (!records[ex.name] || s.weightKg > records[ex.name].maxWeightKg))
+      if (s.completed && s.weightKg !== null && s.weightKg > 0 && (!records[ex.name] || s.weightKg > records[ex.name].maxWeightKg))
         records[ex.name] = { exercise: ex.name, maxWeightKg: s.weightKg, maxReps: s.reps ?? 0, achievedAt: w.createdAt.toISOString().split('T')[0] };
     res.json(Object.values(records).sort((a, b) => b.maxWeightKg - a.maxWeightKg).slice(0, 10));
   } catch (err: any) { res.status(500).json({ error: err.message }); }
