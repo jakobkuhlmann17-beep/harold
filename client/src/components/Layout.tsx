@@ -108,42 +108,42 @@ export default function Layout() {
               </div>
               <span className="text-sm font-label text-on-surface-variant">{user?.username}</span>
             </NavLink>
-            <div className="flex items-center gap-1">
-              <div ref={notifRef} className="relative">
-                <button onClick={openNotifs} className="text-on-surface-variant hover:text-primary transition-colors p-1 relative" title="Notifications">
-                  <span className="material-symbols-outlined text-[20px]">notifications</span>
-                  {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[10px] font-black w-5 h-5 flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
-                </button>
-                {notifOpen && (
-                  <div className="absolute bottom-10 right-0 w-80 bg-surface-container-lowest rounded-3xl shadow-2xl border border-outline-variant/20 z-50 max-h-96 overflow-y-auto">
-                    <div className="sticky top-0 bg-surface-container-lowest p-4 border-b border-outline-variant/20 flex items-center justify-between rounded-t-3xl">
-                      <span className="font-headline font-bold text-sm">Notifications</span>
-                      {unreadCount > 0 && <button onClick={markAllRead} className="text-xs text-primary font-headline font-bold hover:underline">Mark all read</button>}
-                    </div>
-                    {notifs.length === 0 ? (
-                      <div className="p-6 text-center text-on-surface-variant text-sm font-body">No notifications yet</div>
-                    ) : notifs.map(n => (
-                      <button key={n.id} onClick={async () => { await api.put(`/notifications/${n.id}/read`); setNotifOpen(false); setUnreadCount(c => Math.max(0, c - (n.read ? 0 : 1))); if (n.postId) navigate(`/community`); }}
-                        className={`w-full text-left px-4 py-3 flex items-start gap-3 border-b border-outline-variant/10 last:border-0 hover:bg-surface-container-low transition-colors ${!n.read ? 'bg-primary-fixed/20' : ''}`}>
-                        <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-bold font-headline text-on-surface-variant flex-shrink-0">
-                          {n.fromUsername?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-body ${!n.read ? 'font-bold text-on-surface' : 'text-on-surface-variant'}`}>{n.message}</p>
-                          <p className="text-[10px] text-outline font-label mt-0.5">{timeAgo(n.createdAt)}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button onClick={logout} className="text-on-surface-variant hover:text-primary transition-colors p-1" title="Logout">
-                <span className="material-symbols-outlined text-[20px]">logout</span>
-              </button>
-            </div>
+            <button onClick={logout} className="text-on-surface-variant hover:text-primary transition-colors p-1" title="Logout">
+              <span className="material-symbols-outlined text-[20px]">logout</span>
+            </button>
           </div>
         </div>
       </aside>
+
+      {/* Desktop top-right notification bell */}
+      <div ref={notifRef} className="hidden lg:block fixed top-4 right-6 z-[45]">
+        <button onClick={openNotifs} className="bg-surface-container-lowest hover:bg-surface-container-low shadow-md border border-outline-variant/20 rounded-full w-11 h-11 flex items-center justify-center relative transition-colors" title="Notifications">
+          <span className="material-symbols-outlined text-[22px] text-on-surface-variant">notifications</span>
+          {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[10px] font-black w-5 h-5 flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+        </button>
+        {notifOpen && (
+          <div className="absolute top-12 right-0 w-80 bg-surface-container-lowest rounded-3xl shadow-2xl border border-outline-variant/20 z-50 max-h-96 overflow-y-auto">
+            <div className="sticky top-0 bg-surface-container-lowest p-4 border-b border-outline-variant/20 flex items-center justify-between rounded-t-3xl">
+              <span className="font-headline font-bold text-sm">Notifications</span>
+              {unreadCount > 0 && <button onClick={markAllRead} className="text-xs text-primary font-headline font-bold hover:underline">Mark all read</button>}
+            </div>
+            {notifs.length === 0 ? (
+              <div className="p-6 text-center text-on-surface-variant text-sm font-body">No notifications yet</div>
+            ) : notifs.map(n => (
+              <button key={n.id} onClick={async () => { await api.put(`/notifications/${n.id}/read`); setNotifOpen(false); setUnreadCount(c => Math.max(0, c - (n.read ? 0 : 1))); if (n.postId) navigate(`/community`); }}
+                className={`w-full text-left px-4 py-3 flex items-start gap-3 border-b border-outline-variant/10 last:border-0 hover:bg-surface-container-low transition-colors ${!n.read ? 'bg-primary-fixed/20' : ''}`}>
+                <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-bold font-headline text-on-surface-variant flex-shrink-0">
+                  {n.fromUsername?.charAt(0).toUpperCase() || '?'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-body ${!n.read ? 'font-bold text-on-surface' : 'text-on-surface-variant'}`}>{n.message}</p>
+                  <p className="text-[10px] text-outline font-label mt-0.5">{timeAgo(n.createdAt)}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Mobile Top Bar */}
       <header className="lg:hidden frosted-glass fixed top-0 left-0 right-0 z-50 border-b border-outline-variant/20">
@@ -160,6 +160,30 @@ export default function Layout() {
           </div>
         </div>
       </header>
+
+      {/* Mobile notification dropdown */}
+      {notifOpen && (
+        <div className="lg:hidden fixed top-14 right-2 left-2 z-[55] bg-surface-container-lowest rounded-3xl shadow-2xl border border-outline-variant/20 max-h-96 overflow-y-auto">
+          <div className="sticky top-0 bg-surface-container-lowest p-4 border-b border-outline-variant/20 flex items-center justify-between rounded-t-3xl">
+            <span className="font-headline font-bold text-sm">Notifications</span>
+            {unreadCount > 0 && <button onClick={markAllRead} className="text-xs text-primary font-headline font-bold hover:underline">Mark all read</button>}
+          </div>
+          {notifs.length === 0 ? (
+            <div className="p-6 text-center text-on-surface-variant text-sm font-body">No notifications yet</div>
+          ) : notifs.map(n => (
+            <button key={n.id} onClick={async () => { await api.put(`/notifications/${n.id}/read`); setNotifOpen(false); setUnreadCount(c => Math.max(0, c - (n.read ? 0 : 1))); if (n.postId) navigate(`/community`); }}
+              className={`w-full text-left px-4 py-3 flex items-start gap-3 border-b border-outline-variant/10 last:border-0 hover:bg-surface-container-low transition-colors ${!n.read ? 'bg-primary-fixed/20' : ''}`}>
+              <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-bold font-headline text-on-surface-variant flex-shrink-0">
+                {n.fromUsername?.charAt(0).toUpperCase() || '?'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-body ${!n.read ? 'font-bold text-on-surface' : 'text-on-surface-variant'}`}>{n.message}</p>
+                <p className="text-[10px] text-outline font-label mt-0.5">{timeAgo(n.createdAt)}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Mobile Bottom Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-container-lowest border-t border-outline-variant/20 safe-bottom">
