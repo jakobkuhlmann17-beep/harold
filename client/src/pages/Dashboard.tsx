@@ -134,23 +134,37 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <div className="flex-1">
-                  {todayWorkout.activityType === 'WORKOUT' ? (
-                    <>
-                      <p className="font-headline font-bold text-lg text-on-surface capitalize">You have {todayWorkout.focus} scheduled today</p>
-                      <p className="text-sm text-on-surface-variant font-body">
-                        {todayWorkout.total === 0 ? 'No sets added yet' : todayWorkout.completed === 0 ? 'Not started yet' : todayWorkout.completed === todayWorkout.total ? 'All sets complete! Great work \ud83d\udd25' : `${todayWorkout.completed} / ${todayWorkout.total} sets completed`}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-headline font-bold text-lg text-on-surface">You have a {todayWorkout.activityType === 'RUN' ? 'Run' : 'Cycling'} session today</p>
-                      <p className="text-sm text-on-surface-variant font-body">
-                        {todayWorkout.cardio ? `${todayWorkout.cardio.distanceKm || '?'} km \u00b7 ${todayWorkout.cardio.durationMinutes || '?'} min` : 'Not started yet'}
-                      </p>
-                    </>
-                  )}
+                  {todayWorkout.activityType === 'WORKOUT' ? (() => {
+                    const allDone = todayWorkout.total > 0 && todayWorkout.completed === todayWorkout.total;
+                    const partial = todayWorkout.completed > 0 && todayWorkout.completed < todayWorkout.total;
+                    return (
+                      <>
+                        <p className="font-headline font-bold text-lg text-on-surface capitalize">
+                          {allDone ? `You completed ${todayWorkout.focus} today \u2014 good job! \ud83c\udf89` : partial ? `Keep going with ${todayWorkout.focus} today` : `You have ${todayWorkout.focus} scheduled today`}
+                        </p>
+                        <p className="text-sm text-on-surface-variant font-body">
+                          {todayWorkout.total === 0 ? 'No sets added yet' : allDone ? `All ${todayWorkout.total} sets complete \ud83d\udd25` : `${todayWorkout.completed} / ${todayWorkout.total} sets completed`}
+                        </p>
+                      </>
+                    );
+                  })() : (() => {
+                    const hasData = todayWorkout.cardio && (todayWorkout.cardio.distanceKm || todayWorkout.cardio.durationMinutes);
+                    const activity = todayWorkout.activityType === 'RUN' ? 'Run' : 'Cycling';
+                    return (
+                      <>
+                        <p className="font-headline font-bold text-lg text-on-surface">
+                          {hasData ? `You completed your ${activity.toLowerCase()} today \u2014 good job! \ud83c\udf89` : `You have a ${activity} session scheduled today`}
+                        </p>
+                        <p className="text-sm text-on-surface-variant font-body">
+                          {hasData ? `${todayWorkout.cardio.distanceKm || '?'} km \u00b7 ${todayWorkout.cardio.durationMinutes || '?'} min` : 'Not started yet'}
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
-                <Link to="/workout" className="hearth-glow text-white rounded-full px-5 py-2 text-sm font-headline font-bold hover:opacity-90 transition-opacity flex-shrink-0">Go to workout &rarr;</Link>
+                <Link to="/workout" className={`rounded-full px-5 py-2 text-sm font-headline font-bold transition-opacity flex-shrink-0 ${todayWorkout.total > 0 && todayWorkout.completed === todayWorkout.total ? 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest' : 'hearth-glow text-white hover:opacity-90'}`}>
+                  {todayWorkout.total > 0 && todayWorkout.completed === todayWorkout.total ? 'View workout \u2192' : 'Go to workout \u2192'}
+                </Link>
               </div>
             </div>
           ) : (
