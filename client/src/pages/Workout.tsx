@@ -69,6 +69,11 @@ export default function Workout() {
   const [sharing, setSharing] = useState(false);
   const [shareMode, setShareMode] = useState<'day' | 'week'>('day');
   const [shareDay, setShareDay] = useState<string | null>(null);
+  const [editingFocus, setEditingFocus] = useState(false);
+  const [focusDraft, setFocusDraft] = useState('');
+  const [showAddDay, setShowAddDay] = useState(false);
+  const [newDayOfWeek, setNewDayOfWeek] = useState('MONDAY');
+  const [newDayFocus, setNewDayFocus] = useState('');
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; confirmStyle: 'error' | 'primary'; onConfirm: () => Promise<void> } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const showToast = useCallback((msg: string) => setToast(msg), []);
@@ -207,6 +212,45 @@ export default function Workout() {
     await fetchWeeks();
   };
 
+  const saveFocus = async () => {
+    if (!currentDay) return;
+    await api.put(`/days/${currentDay.id}`, { focus: focusDraft.trim() });
+    setEditingFocus(false);
+    await fetchWeeks();
+  };
+
+  const addDay = async () => {
+    if (!currentWeek) return;
+    try {
+      await api.post('/days', { weekId: currentWeek.id, dayOfWeek: newDayOfWeek, focus: newDayFocus.trim() });
+      setShowAddDay(false); setNewDayFocus('');
+      const { data } = await api.get('/weeks');
+      setWeeks(data);
+      // Navigate to the newly added day
+      const updatedWeek = data[weekIdx];
+      const sorted = updatedWeek?.days?.slice().sort((a: any, b: any) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek)) || [];
+      const newIdx = sorted.findIndex((d: any) => d.dayOfWeek === newDayOfWeek);
+      if (newIdx >= 0) setSelectedDay(newIdx);
+      showToast(`${newDayOfWeek.charAt(0) + newDayOfWeek.slice(1).toLowerCase()} added to Week ${currentWeek.weekNumber}`);
+    } catch (err: any) { alert(err.response?.data?.error || 'Failed to add day'); }
+  };
+
+  const removeDay = (day: any) => {
+    setConfirmDialog({
+      title: `Remove ${day.dayOfWeek.charAt(0) + day.dayOfWeek.slice(1).toLowerCase()}?`,
+      message: `This will permanently delete all exercises, sets and cardio sessions for ${day.dayOfWeek.charAt(0) + day.dayOfWeek.slice(1).toLowerCase()}. This cannot be undone.`,
+      confirmLabel: 'Remove Day',
+      confirmStyle: 'error',
+      onConfirm: async () => {
+        await api.delete(`/days/${day.id}`);
+        setConfirmDialog(null);
+        showToast(`${day.dayOfWeek.charAt(0) + day.dayOfWeek.slice(1).toLowerCase()} removed`);
+        setSelectedDay(Math.max(0, selectedDay - 1));
+        await fetchWeeks();
+      },
+    });
+  };
+
   if (loading) return <div className="flex items-center justify-center h-64"><span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span></div>;
 
   const deleteWeek = () => {
@@ -290,7 +334,22 @@ export default function Workout() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2">
         <div>
-          {currentDay && <p className="uppercase tracking-widest text-xs font-bold text-tertiary font-label">{currentDay.focus || 'Workout'}</p>}
+          {currentDay && (
+            editingFocus ? (
+              <div className="flex items-center gap-1">
+                <input value={focusDraft} onChange={(e) => setFocusDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') saveFocus(); if (e.key === 'Escape') setEditingFocus(false); }}
+                  autoFocus className="bg-surface-container-low rounded-lg px-3 py-1.5 text-xs uppercase tracking-widest font-bold text-tertiary border border-primary/40 focus:ring-2 focus:ring-primary/20 outline-none w-48" />
+                <button onClick={saveFocus} className="text-[#2e7d32] hover:opacity-80 transition-opacity"><span className="material-symbols-outlined text-[18px]">check</span></button>
+                <button onClick={() => setEditingFocus(false)} className="text-error hover:opacity-80 transition-opacity"><span className="material-symbols-outlined text-[18px]">close</span></button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 group cursor-pointer" onClick={() => { setFocusDraft(currentDay.focus || ''); setEditingFocus(true); }}>
+                <p className="uppercase tracking-widest text-xs font-bold text-tertiary font-label">{currentDay.focus || 'Workout'}</p>
+                <span className="material-symbols-outlined text-[14px] text-on-surface-variant/50 group-hover:text-primary transition-colors">edit</span>
+              </div>
+            )
+          )}
           <h2 className="text-3xl lg:text-4xl font-black font-headline text-on-surface">
             Workout <span className="text-primary">Log</span>
           </h2>
@@ -467,20 +526,72 @@ export default function Workout() {
               const done = day.exercises.flatMap(e => e.sets).filter(s => s.completed).length;
               const isCardio = day.activityType === 'RUN' || day.activityType === 'CYCLING';
               const tabExtra = isCardio ? (day.activityType === 'RUN' ? '\ud83c\udfc3' : '\ud83d\udeb4') : `${done}/${total}`;
+              const isActive = i === selectedDay;
               return (
-                <button key={day.id} onClick={() => setSelectedDay(i)}
-                  className={`flex-shrink-0 py-2.5 px-4 rounded-full text-sm font-headline font-medium transition-all duration-300 ${
-                    i === selectedDay ? 'hearth-glow text-on-primary shadow-md' : 'bg-surface-container-low text-on-surface hover:bg-surface-container-high'
+                <div key={day.id} onClick={() => setSelectedDay(i)}
+                  className={`flex-shrink-0 py-2.5 px-4 rounded-full text-sm font-headline font-medium transition-all duration-300 cursor-pointer group flex items-center gap-1 ${
+                    isActive ? 'hearth-glow text-on-primary shadow-md' : 'bg-surface-container-low text-on-surface hover:bg-surface-container-high'
                   }`}>
                   <span className="flex items-center gap-1">
-                    {sessionActive && i === selectedDay && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />}
+                    {sessionActive && isActive && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />}
                     {DAY_SHORT[day.dayOfWeek]}
                   </span>
-                  <span className="ml-1 text-xs opacity-70">{tabExtra}</span>
-                </button>
+                  <span className="text-xs opacity-70">{tabExtra}</span>
+                  <span onClick={(e) => { e.stopPropagation(); removeDay(day); }}
+                    className="w-4 h-4 rounded-full bg-error/20 text-error text-[10px] flex items-center justify-center ml-1 hover:bg-error/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    &times;
+                  </span>
+                </div>
               );
             })}
+            {/* Add Day button */}
+            {sortedDays.length < 7 && (
+              <button onClick={() => {
+                const existing = new Set(sortedDays.map(d => d.dayOfWeek));
+                const firstAvailable = DAY_ORDER.find(d => !existing.has(d)) || 'MONDAY';
+                setNewDayOfWeek(firstAvailable); setNewDayFocus(''); setShowAddDay(true);
+              }} className="flex-shrink-0 bg-surface-container-low rounded-full px-4 py-2 text-sm font-headline border border-outline-variant/40 border-dashed hover:bg-surface-container-high flex items-center gap-1 cursor-pointer">
+                <span className="material-symbols-outlined text-[16px]">add</span> Add Day
+              </button>
+            )}
           </div>
+
+          {/* Add Day modal */}
+          {showAddDay && currentWeek && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => setShowAddDay(false)}>
+              <div className="bg-surface-container-lowest rounded-3xl max-w-md w-full mx-4 p-8 shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+                <h3 className="font-headline font-bold text-xl text-on-surface">Add a day to Week {currentWeek.weekNumber}</h3>
+                {(() => {
+                  const existing = new Set(sortedDays.map(d => d.dayOfWeek));
+                  const available = DAY_ORDER.filter(d => !existing.has(d));
+                  if (available.length === 0) {
+                    return <>
+                      <p className="text-sm text-on-surface-variant font-body">All days are already added</p>
+                      <button onClick={() => setShowAddDay(false)} className="bg-surface-container-high rounded-full px-6 py-3 text-sm font-headline font-bold w-full">Close</button>
+                    </>;
+                  }
+                  return <>
+                    <div>
+                      <label className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-1 block">Day</label>
+                      <select value={newDayOfWeek} onChange={(e) => setNewDayOfWeek(e.target.value)}
+                        className="w-full bg-surface-container-low rounded-xl px-4 py-3 font-headline font-bold text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        {available.map(d => <option key={d} value={d}>{d.charAt(0) + d.slice(1).toLowerCase()}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-1 block">Focus</label>
+                      <input value={newDayFocus} onChange={(e) => setNewDayFocus(e.target.value)} placeholder="e.g. chest, legs, cardio, rest"
+                        className="w-full border border-outline-variant rounded-xl px-4 py-3 text-sm font-body bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-outline text-on-surface" />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button onClick={() => setShowAddDay(false)} className="bg-surface-container-high rounded-full px-6 py-3 text-sm font-headline font-bold text-on-surface">Cancel</button>
+                      <button onClick={addDay} className="hearth-glow text-white rounded-full px-5 py-2 font-headline font-bold text-sm hover:opacity-90 transition-opacity">Add Day</button>
+                    </div>
+                  </>;
+                })()}
+              </div>
+            </div>
+          )}
 
           {/* Session timer bar */}
           {sessionActive && (
