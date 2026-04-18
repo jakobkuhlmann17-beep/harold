@@ -19,7 +19,7 @@ export default function Dashboard() {
   const [todayWorkout, setTodayWorkout] = useState<{ focus: string; completed: number; total: number; activityType: string; cardio: any | null } | null>(null);
   const [nutrition, setNutrition] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [streak, setStreak] = useState(0);
-  const [weeklyVolume, setWeeklyVolume] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  const [currentWeekDays, setCurrentWeekDays] = useState<any[]>([]);
   const [compilation, setCompilation] = useState<CompWeek[]>([]);
   const [deleting, setDeleting] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -55,15 +55,10 @@ export default function Dashboard() {
         } else if (i > 0) break;
       }
       setStreak(streakCount);
-      const dayOrder = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
-      const vol = dayOrder.map((dn) => {
-        const d = latestWeek.days?.find((dd: any) => dd.dayOfWeek === dn);
-        return d ? d.exercises?.reduce((sum: number, e: any) => sum + (e.sets?.length || 0), 0) || 0 : 0;
-      });
-      setWeeklyVolume(vol);
     });
 
     api.get('/weeks/compilation').then(({ data }) => setCompilation(data));
+    api.get('/trends/current-week').then(({ data }) => setCurrentWeekDays(data?.days || [])).catch(() => {});
 
     const today = new Date().toISOString().split('T')[0];
     api.get(`/meals?date=${today}`).then(({ data }) => {
@@ -101,7 +96,6 @@ export default function Dashboard() {
   const proPct = Math.min(100, (nutrition.protein / (user?.proteinTarget || 150)) * 100);
   const carbPct = Math.min(100, (nutrition.carbs / (user?.carbsTarget || 200)) * 100);
   const fatPct = Math.min(100, (nutrition.fat / (user?.fatTarget || 65)) * 100);
-  const maxVolume = Math.max(...weeklyVolume, 1);
   const ringRadius = 54;
   const ringCircumference = 2 * Math.PI * ringRadius;
   const ringOffset = ringCircumference - (calPct / 100) * ringCircumference;
@@ -226,16 +220,43 @@ export default function Dashboard() {
             </div>
           )}
           <div className="bg-surface-container-lowest p-6 lg:p-8 rounded-3xl">
-            <h4 className="font-headline font-bold text-on-surface mb-6">Workout Intensity Trend</h4>
-            <div className="flex items-end justify-between gap-2 h-32">
-              {weeklyVolume.map((vol, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full max-w-[40px] rounded-t-lg transition-all duration-500"
-                    style={{ height: `${Math.max(4, (vol / maxVolume) * 100)}%`, background: vol > 0 ? `linear-gradient(135deg, rgba(161,64,0,${0.4 + (vol / maxVolume) * 0.6}) 0%, rgba(242,109,33,${0.4 + (vol / maxVolume) * 0.6}) 100%)` : '#eae7e7' }} />
-                  <span className="text-[10px] font-label text-on-surface-variant">{WEEK_SHORT[i]}</span>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h4 className="font-headline font-bold text-on-surface">Workout Completion</h4>
+                <p className="text-xs text-on-surface-variant font-body">This week &middot; resets every Monday</p>
+              </div>
+              <div className="flex items-center gap-3 text-xs font-body text-on-surface-variant">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: '#f26d21' }} /> Done</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-surface-container-highest" /> Todo</span>
+              </div>
             </div>
+            {(() => {
+              const maxEx = Math.max(...currentWeekDays.map((d: any) => d.totalExercises || 0), 1);
+              const blockGap = 3;
+              return (
+                <div className="flex items-end justify-between gap-2 h-40">
+                  {currentWeekDays.map((d: any, i: number) => {
+                    const blockHeightPct = (100 - blockGap * (maxEx - 1)) / maxEx;
+                    const blocks = [];
+                    for (let b = 0; b < d.totalExercises; b++) {
+                      const isComplete = b < d.completedExercises;
+                      blocks.push(
+                        <div key={b} className="w-full rounded-md transition-all"
+                          style={{ height: `${blockHeightPct}%`, background: isComplete ? '#f26d21' : '#e4e2e1', marginBottom: b < d.totalExercises - 1 ? `${blockGap}%` : 0 }} />
+                      );
+                    }
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full">
+                        <div className="w-full max-w-[44px] flex-1 flex flex-col-reverse justify-start">
+                          {blocks.length > 0 ? blocks : <div className="w-full rounded-md bg-surface-container-high" style={{ height: '6%' }} />}
+                        </div>
+                        <span className={`text-[10px] font-label ${d.isToday ? 'text-primary font-bold' : 'text-on-surface-variant'}`}>{WEEK_SHORT[i]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
         <div className="lg:col-span-1 space-y-6">

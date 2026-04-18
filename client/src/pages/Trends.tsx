@@ -65,7 +65,6 @@ export default function Trends() {
           <InsightCard icon="pie_chart" value={`${insights.avgCompletionRate}%`} label="completion rate" ringPct={insights.avgCompletionRate} />
           <InsightCard icon="fitness_center" value={insights.totalVolumeAllTime >= 1000 ? `${(insights.totalVolumeAllTime / 1000).toFixed(1)}k` : String(insights.totalVolumeAllTime)} label="kg lifted all time" />
           <InsightCard icon="calendar_today" value={insights.mostConsistentDay.charAt(0) + insights.mostConsistentDay.slice(1).toLowerCase()} label="most consistent day" />
-          <InsightCard icon="emoji_events" value={insights.strongestExercise.name} label="strongest lift" />
           {/* AI recommendation */}
           <div className="min-w-[300px] hearth-glow text-white rounded-2xl p-5 flex-shrink-0">
             <div className="flex items-center gap-2 mb-1">
